@@ -43,7 +43,11 @@ import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +55,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -64,6 +71,7 @@ import androidx.navigation.NavHostController
 import com.hisabnikash.app.data.container.AppContainer
 import com.hisabnikash.app.data.db.AuditEventEntity
 import com.hisabnikash.app.data.repo.MetricsBundle
+import com.hisabnikash.app.data.repo.Period
 import com.hisabnikash.app.data.repo.PeriodControl
 import com.hisabnikash.app.domain.model.HealthEvaluator
 import com.hisabnikash.app.domain.model.HealthIndicator
@@ -110,6 +118,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Calendar
 import java.util.Locale
 
@@ -121,6 +132,8 @@ data class HomeUiState(
     val businessName: String = "",
     val userName: String = "",
     val period: String = "1D",
+    val customFromAt: Long? = null,
+    val customToAt: Long? = null,
     val metrics: MetricsBundle = MetricsBundle(),
     val previous: MetricsBundle = MetricsBundle(),
     val chart: List<ChartPoint> = emptyList(),
@@ -146,6 +159,7 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
     private val notifications = container.notificationRepository
 
     private val periodFlow = MutableStateFlow("1D")
+    private val customRange = MutableStateFlow<Period?>(null)
 
     val state: StateFlow<HomeUiState> = prefs.activeBusinessId
         .flatMapLatest { id ->
@@ -160,18 +174,28 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
 
     /** Reactive state: re-computes whenever any contributing table changes. */
     private fun buildFlow(container: AppContainer, businessId: Long): Flow<HomeUiState> {
-        val metricsPair = periodFlow.flatMapLatest { period ->
+        val selected = combine(periodFlow, customRange) { period, custom -> period to custom }
+        val metricsPair = selected.flatMapLatest { (period, custom) ->
             val now = System.currentTimeMillis()
-            val cur = PeriodControl.resolve(period, now)
-            val prev = PeriodControl.previous(period, now)
+            val cur = if (period == "CUSTOM") {
+                custom ?: PeriodControl.resolve("30D", now)
+            } else {
+                PeriodControl.resolve(period, now)
+            }
+            val prev = if (period == "CUSTOM") {
+                val span = (cur.toAt - cur.fromAt).coerceAtLeast(1L)
+                Period(cur.fromAt - span, cur.fromAt - 1L)
+            } else {
+                PeriodControl.previous(period, now)
+            }
             combine(
                 insights.observeMetrics(businessId, cur.fromAt, cur.toAt),
                 insights.observeMetrics(businessId, prev.fromAt, prev.toAt)
             ) { current, previous -> current to previous }
         }
-        val chartFlow = periodFlow.flatMapLatest { period ->
+        val chartFlow = selected.flatMapLatest { (period, custom) ->
             kotlinx.coroutines.flow.flow {
-                emit(chartFor(container, businessId, period, System.currentTimeMillis()))
+                emit(chartFor(container, businessId, period, custom, System.currentTimeMillis()))
             }
         }
         val stockCounters = combine(
@@ -215,6 +239,8 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
                 businessName = ws.business?.name ?: "",
                 userName = listOfNotNull(ws.settings?.firstName, ws.settings?.lastName).joinToString(" "),
                 period = periodFlow.value,
+                customFromAt = if (periodFlow.value == "CUSTOM") customRange.value?.fromAt else null,
+                customToAt = if (periodFlow.value == "CUSTOM") customRange.value?.toAt else null,
                 metrics = metrics,
                 previous = previous,
                 chart = chart,
@@ -249,8 +275,18 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
         }
     }
 
-    private suspend fun chartFor(container: AppContainer, businessId: Long, period: String, now: Long): List<ChartPoint> {
-        val current = PeriodControl.resolve(period, now)
+    private suspend fun chartFor(
+        container: AppContainer,
+        businessId: Long,
+        period: String,
+        custom: Period?,
+        now: Long
+    ): List<ChartPoint> {
+        val current = if (period == "CUSTOM") {
+            custom ?: PeriodControl.resolve("30D", now)
+        } else {
+            PeriodControl.resolve(period, now)
+        }
         return if (period == "1D") {
             container.database.orderDao().allInRange(businessId, current.fromAt, current.toAt)
                 .filter { it.status == "DELIVERED" }
@@ -287,6 +323,13 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
 
     fun setPeriod(period: String) {
         periodFlow.value = period
+    }
+
+    /** Applies a validated custom range: end must never precede start. */
+    fun setCustomRange(fromAt: Long, toAt: Long) {
+        if (toAt < fromAt) return
+        customRange.value = Period(fromAt, toAt)
+        periodFlow.value = "CUSTOM"
     }
 
     fun refresh(container: AppContainer) {
@@ -326,6 +369,18 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
     }
 
     val greeting = greetingText()
+    var showCustomPicker by remember { mutableStateOf(false) }
+    if (showCustomPicker) {
+        CustomRangePicker(
+            initialFromAt = state.customFromAt,
+            initialToAt = state.customToAt,
+            onDismiss = { showCustomPicker = false },
+            onApply = { from, to ->
+                showCustomPicker = false
+                vm.setCustomRange(from, to)
+            }
+        )
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -387,7 +442,24 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
         }
 
         // -------------------------------------------------- period selector
-        item { FilterChips(listOf("1D", "7D", "10D", "30D", "90D", "1Y"), state.period, { vm.setPeriod(it) }) }
+        item {
+            val periodLabel = if (state.period == "CUSTOM") "Custom" else state.period
+            FilterChips(
+                listOf("1D", "7D", "10D", "30D", "90D", "1Y", "Custom"),
+                periodLabel,
+                { picked ->
+                    if (picked == "Custom") showCustomPicker = true else vm.setPeriod(picked)
+                }
+            )
+            if (state.period == "CUSTOM" && state.customFromAt != null && state.customToAt != null) {
+                Text(
+                    "Custom range: ${com.hisabnikash.app.domain.model.formatDay(state.customFromAt!!)} – ${com.hisabnikash.app.domain.model.formatDay(state.customToAt!!)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkFaint,
+                    modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = 2.dp)
+                )
+            }
+        }
 
         // ------------------------------------------------------ hero snapshot
         item { DashboardHero(state) }
@@ -614,7 +686,11 @@ private fun DashboardHero(state: HomeUiState) {
                 )
                 Spacer(Modifier.width(Spacing.Sm))
                 Text(
-                    if (state.period == "1D") "TODAY" else state.period,
+                    when (state.period) {
+                        "1D" -> "TODAY"
+                        "CUSTOM" -> "CUSTOM RANGE"
+                        else -> state.period
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = BrandGold,
@@ -693,6 +769,69 @@ private fun activityLabel(event: AuditEventEntity): String {
         .split('_')
         .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
     return if (action.isBlank()) type else "$type $action"
+}
+
+/**
+ * Material date-range picker bound to a local-timezone day range.
+ *
+ * `DateRangePicker` works in UTC day boundaries, so the selected days are
+ * converted to the device timezone before they are stored and queried. The
+ * resulting range is inclusive: [fromAt] at 00:00 of the first day through
+ * 23:59:59.999 of the last day. The Material picker itself never allows an
+ * end date before the start date; the ViewModel re-validates on apply too.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomRangePicker(
+    initialFromAt: Long?,
+    initialToAt: Long?,
+    onDismiss: () -> Unit,
+    onApply: (fromAt: Long, toAt: Long) -> Unit
+) {
+    val pickerState = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = initialFromAt?.let(::toUtcDayStart),
+        initialSelectedEndDateMillis = initialToAt?.let(::toUtcDayStart)
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    val start = pickerState.selectedStartDateMillis
+                    val end = pickerState.selectedEndDateMillis
+                    if (start != null && end != null && end >= start) {
+                        val range = toLocalRange(start, end)
+                        onApply(range.first, range.second)
+                    }
+                },
+                enabled = pickerState.selectedStartDateMillis != null &&
+                    pickerState.selectedEndDateMillis != null
+            ) { Text("Apply") }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    ) {
+        DateRangePicker(
+            state = pickerState,
+            modifier = Modifier.weight(1f),
+            showModeToggle = false
+        )
+    }
+}
+
+private fun toUtcDayStart(localMillis: Long): Long {
+    val date = Instant.ofEpochMilli(localMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+    return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+}
+
+private fun toLocalRange(startUtc: Long, endUtc: Long): Pair<Long, Long> {
+    val zone = ZoneId.systemDefault()
+    val startDay = Instant.ofEpochMilli(startUtc).atZone(ZoneOffset.UTC).toLocalDate()
+    val endDay = Instant.ofEpochMilli(endUtc).atZone(ZoneOffset.UTC).toLocalDate()
+    val fromAt = startDay.atStartOfDay(zone).toInstant().toEpochMilli()
+    val toAt = endDay.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1L
+    return fromAt to toAt
 }
 
 private fun greetingText(): String {
