@@ -65,9 +65,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -672,10 +669,6 @@ private fun RankLine(name: String, value: String, icon: ImageVector, accent: Boo
         )
         Spacer(Modifier.width(8.dp))
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-        Spacer(Modifier.height(20.dp))
     }
 }
 

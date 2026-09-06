@@ -1,5 +1,6 @@
 package com.hisabnikash.app.ui.notifications
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -110,7 +112,7 @@ fun NotificationsScreenRoute(container: AppContainer, navController: NavHostCont
             )
         } else {
             state.items.forEach { notification ->
-                ElevatedCard(
+                Surface(
                     onClick = {
                         vm.markRead(container, notification.id)
                         notificationTarget(notification.refType, notification.refId)?.let {
@@ -118,7 +120,9 @@ fun NotificationsScreenRoute(container: AppContainer, navController: NavHostCont
                         }
                     },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Column(Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -622,6 +622,8 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
             enabled = !state.saving,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
         ) { Text(if (state.saving) "Saving…" else "Save product") }
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Product image

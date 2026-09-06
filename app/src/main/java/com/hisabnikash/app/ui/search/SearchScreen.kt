@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -129,10 +130,12 @@ fun SearchScreenRoute(container: AppContainer, navController: NavHostController)
 
 @Composable
 private fun SearchResultRow(result: SearchResult, onClick: () -> Unit) {
-    androidx.compose.material3.ElevatedCard(
+    androidx.compose.material3.Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-        shape = MaterialTheme.shapes.small
+        shape = MaterialTheme.shapes.extraSmall,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         androidx.compose.foundation.layout.Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
