@@ -41,14 +41,21 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.SwipeLeft
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
 import com.hisabnikash.app.data.container.AppContainer
+import com.hisabnikash.app.data.repo.Period
 import com.hisabnikash.app.data.repo.PeriodControl
 import com.hisabnikash.app.domain.model.formatMoney
 import com.hisabnikash.app.ui.components.AppTextField
@@ -68,6 +76,9 @@ import com.hisabnikash.app.ui.components.MetricCard
 import com.hisabnikash.app.ui.components.ScreenFrame
 import com.hisabnikash.app.ui.components.SectionHeader
 import com.hisabnikash.app.ui.nav.Routes
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import com.hisabnikash.app.ui.theme.BrandGreen
 import com.hisabnikash.app.ui.theme.InkFaint
 import com.hisabnikash.app.ui.theme.Warning
@@ -250,6 +261,8 @@ fun MoreTab(container: AppContainer, navController: NavHostController) {
 data class AnalyticsUi(
     val loading: Boolean = true,
     val period: String = "30D",
+    val customFromAt: Long? = null,
+    val customToAt: Long? = null,
     val metrics: com.hisabnikash.app.data.repo.MetricsBundle = com.hisabnikash.app.data.repo.MetricsBundle(),
     val chart: List<ChartPoint> = emptyList(),
     val topProducts: List<String> = emptyList(),
@@ -261,42 +274,50 @@ class AnalyticsViewModel(container: AppContainer) : ViewModel() {
 
     private val insights = container.insightsRepository
     private val periodFlow = MutableStateFlow("30D")
+    private val customRange = MutableStateFlow<Period?>(null)
 
     val state: StateFlow<AnalyticsUi> = container.prefs.activeBusinessId
         .flatMapLatest { id ->
             if (id == null || id <= 0) flowOf(AnalyticsUi().copy(loading = false))
-            else periodFlow.flatMapLatest { period ->
-                kotlinx.coroutines.flow.flow {
-                    val now = System.currentTimeMillis()
-                    val range = PeriodControl.resolve(period, now)
-                    val metrics = insights.metrics(id, range.fromAt, range.toAt)
-                    val daily = insights.dailySeries(id, range.fromAt, range.toAt)
-                    val products = insights.productSales(id, range.fromAt, range.toAt)
-                        .sortedByDescending { it.revenueMinor }
-                        .take(6)
-                    val channels = insights.byChannel(id, range.fromAt, range.toAt)
-                        .sortedByDescending { it.orderCount }
-                    val expenses = insights.expensesByCategory(id, range.fromAt, range.toAt)
-                        .take(6)
-                    emit(
-                        AnalyticsUi(
-                            loading = false,
-                            period = period,
-                            metrics = metrics,
-                            chart = daily.map {
-                                ChartPoint(
-                                    com.hisabnikash.app.domain.model.formatDay(it.time),
-                                    it.revenueMinor / com.hisabnikash.app.domain.model.MoneyScale.SCALE.toFloat(),
-                                    formatMoney(it.revenueMinor)
-                                )
-                            },
-                            topProducts = products.map { "${it.name}: ${formatMoney(it.revenueMinor)}" },
-                            channels = channels.map { "${it.name ?: "Unassigned"}: ${it.orderCount} orders" },
-                            expenses = expenses.map { "${it.first}: ${formatMoney(it.second)}" }
+            else combine(periodFlow, customRange) { period, custom -> period to custom }
+                .flatMapLatest { (period, custom) ->
+                    kotlinx.coroutines.flow.flow {
+                        val now = System.currentTimeMillis()
+                        val range = if (period == "CUSTOM") {
+                            custom ?: PeriodControl.resolve("30D", now)
+                        } else {
+                            PeriodControl.resolve(period, now)
+                        }
+                        val metrics = insights.metrics(id, range.fromAt, range.toAt)
+                        val daily = insights.dailySeries(id, range.fromAt, range.toAt)
+                        val products = insights.productSales(id, range.fromAt, range.toAt)
+                            .sortedByDescending { it.revenueMinor }
+                            .take(6)
+                        val channels = insights.byChannel(id, range.fromAt, range.toAt)
+                            .sortedByDescending { it.orderCount }
+                        val expenses = insights.expensesByCategory(id, range.fromAt, range.toAt)
+                            .take(6)
+                        emit(
+                            AnalyticsUi(
+                                loading = false,
+                                period = period,
+                                customFromAt = if (period == "CUSTOM") custom?.fromAt else null,
+                                customToAt = if (period == "CUSTOM") custom?.toAt else null,
+                                metrics = metrics,
+                                chart = daily.map {
+                                    ChartPoint(
+                                        com.hisabnikash.app.domain.model.formatDay(it.time),
+                                        it.revenueMinor / com.hisabnikash.app.domain.model.MoneyScale.SCALE.toFloat(),
+                                        formatMoney(it.revenueMinor)
+                                    )
+                                },
+                                topProducts = products.map { "${it.name}: ${formatMoney(it.revenueMinor)}" },
+                                channels = channels.map { "${it.name ?: "Unassigned"}: ${it.orderCount} orders" },
+                                expenses = expenses.map { "${it.first}: ${formatMoney(it.second)}" }
+                            )
                         )
-                    )
+                    }
                 }
-            }
         }
         .stateIn(
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default),
@@ -305,15 +326,47 @@ class AnalyticsViewModel(container: AppContainer) : ViewModel() {
         )
 
     fun setPeriod(period: String) { periodFlow.value = period }
+
+    fun setCustomRange(fromAt: Long, toAt: Long) {
+        customRange.value = Period(fromAt, toAt)
+        periodFlow.value = "CUSTOM"
+    }
 }
 
 @Composable
 fun AnalyticsScreenRoute(container: AppContainer, navController: NavHostController) {
     val vm = appViewModel(container) { AnalyticsViewModel(it) }
     val state by vm.state.collectAsState()
+    var showPicker by remember { mutableStateOf(false) }
 
     ScreenFrame("Analytics", onBack = { navController.popBackStack() }) {
-        FilterChips(listOf("7D", "30D", "90D", "1Y"), state.period, { vm.setPeriod(it) })
+        val periodLabel = if (state.period == "CUSTOM") "Custom" else state.period
+        FilterChips(
+            listOf("1D", "7D", "10D", "30D", "90D", "1Y", "Custom"),
+            periodLabel,
+            { picked ->
+                if (picked == "Custom") showPicker = true else vm.setPeriod(picked)
+            }
+        )
+        if (state.period == "CUSTOM" && state.customFromAt != null && state.customToAt != null) {
+            Text(
+                "Custom range: ${com.hisabnikash.app.domain.model.formatDay(state.customFromAt!!)} – ${com.hisabnikash.app.domain.model.formatDay(state.customToAt!!)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = InkFaint,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+            )
+        }
+        if (showPicker) {
+            CustomRangePicker(
+                initialFromAt = state.customFromAt,
+                initialToAt = state.customToAt,
+                onDismiss = { showPicker = false },
+                onApply = { from, to ->
+                    showPicker = false
+                    vm.setCustomRange(from, to)
+                }
+            )
+        }
         val m = state.metrics
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
             MetricCard("Revenue", formatMoney(m.revenueMinor), Modifier.weight(1f))
@@ -345,6 +398,66 @@ fun AnalyticsScreenRoute(container: AppContainer, navController: NavHostControll
         }
         Spacer(Modifier.height(20.dp))
     }
+}
+
+/**
+ * Material date-range picker bound to a local-timezone day range.
+ *
+ * `DateRangePicker` works in UTC day boundaries, so the selected days are
+ * converted to the device timezone before they are stored and queried. The
+ * resulting range is inclusive: [fromAt] at 00:00 of the first day through
+ * 23:59:59.999 of the last day.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomRangePicker(
+    initialFromAt: Long?,
+    initialToAt: Long?,
+    onDismiss: () -> Unit,
+    onApply: (fromAt: Long, toAt: Long) -> Unit
+) {
+    val pickerState = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = initialFromAt?.let(::toUtcDayStart),
+        initialSelectedEndDateMillis = initialToAt?.let(::toUtcDayStart)
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val start = pickerState.selectedStartDateMillis
+                    val end = pickerState.selectedEndDateMillis
+                    if (start != null && end != null) {
+                        val range = toLocalRange(start, end)
+                        onApply(range.first, range.second)
+                    }
+                },
+                enabled = pickerState.selectedStartDateMillis != null &&
+                    pickerState.selectedEndDateMillis != null
+            ) { Text("Apply") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    ) {
+        DateRangePicker(
+            state = pickerState,
+            modifier = Modifier.weight(1f),
+            showModeToggle = false
+        )
+    }
+}
+
+private fun toUtcDayStart(localMillis: Long): Long {
+    val date = Instant.ofEpochMilli(localMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+    return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+}
+
+private fun toLocalRange(startUtc: Long, endUtc: Long): Pair<Long, Long> {
+    val zone = ZoneId.systemDefault()
+    val startDay = Instant.ofEpochMilli(startUtc).atZone(ZoneOffset.UTC).toLocalDate()
+    val endDay = Instant.ofEpochMilli(endUtc).atZone(ZoneOffset.UTC).toLocalDate()
+    val fromAt = startDay.atStartOfDay(zone).toInstant().toEpochMilli()
+    val toAt = endDay.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1L
+    return fromAt to toAt
 }
 
 // ---------------------------------------------------------------------------
