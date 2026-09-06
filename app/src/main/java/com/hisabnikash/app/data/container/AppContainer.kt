@@ -3,6 +3,7 @@ package com.hisabnikash.app.data.container
 import android.content.Context
 import androidx.room.Room
 import com.hisabnikash.app.data.db.AppDatabase
+import com.hisabnikash.app.data.db.DatabaseMigrations
 import com.hisabnikash.app.data.prefs.AppPreferences
 import com.hisabnikash.app.data.repo.BackupRepository
 import com.hisabnikash.app.data.repo.CatalogRepository
@@ -27,7 +28,7 @@ class AppContainer(context: Context) {
         appContext,
         AppDatabase::class.java,
         "hisabnikash.db"
-    ).fallbackToDestructiveMigration()
+    ).addMigrations(*DatabaseMigrations.ALL)
         .build()
 
     val prefs: AppPreferences = AppPreferences(appContext)
