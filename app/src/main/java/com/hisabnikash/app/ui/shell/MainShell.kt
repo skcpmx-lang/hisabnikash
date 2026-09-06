@@ -1,7 +1,9 @@
 package com.hisabnikash.app.ui.shell
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Badge
@@ -43,6 +45,7 @@ fun MainShell(container: AppContainer, navController: NavHostController) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
             NavigationBar {
                 tabs.forEachIndexed { index, item ->

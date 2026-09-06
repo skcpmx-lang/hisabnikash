@@ -3,8 +3,10 @@ package com.hisabnikash.app.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hisabnikash.app.ui.theme.Ink
+import com.hisabnikash.app.ui.theme.Spacing
 
 /**
  * Standard secondary screen frame: top app bar with back navigation and a
@@ -39,6 +42,9 @@ fun ScreenFrame(
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        // Safe drawing insets: status bar, navigation bar, display cutout and
+        // keyboard are all consumed so content is never cropped or hidden.
+        contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
                 title = {
@@ -76,6 +82,6 @@ fun ScreenFrame(
             .then(
                 if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier
             )
-        Column(modifier = contentModifier.padding(bottom = 24.dp), content = content)
+        Column(modifier = contentModifier.padding(bottom = Spacing.Xxl), content = content)
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hisabnikash.app.ui.theme.BrandGreenSoft
 import com.hisabnikash.app.ui.theme.InkFaint
+import com.hisabnikash.app.ui.theme.Spacing
 import com.hisabnikash.app.ui.theme.SurfaceTint
 
 @Composable
@@ -43,7 +44,7 @@ fun SectionHeader(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = Spacing.ScreenMargin, vertical = Spacing.Sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -102,8 +103,9 @@ fun MetricCard(
                     label,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    // Wrapping (not just ellipsis) keeps labels fully readable
+                    // at 100–150% font scale.
+                    maxLines = 2
                 )
             }
             Spacer(Modifier.height(6.dp))
