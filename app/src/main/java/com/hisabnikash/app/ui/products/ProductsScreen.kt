@@ -1,6 +1,9 @@
 package com.hisabnikash.app.ui.products
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,13 +11,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -22,6 +29,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,12 +42,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
 import com.hisabnikash.app.data.container.AppContainer
 import com.hisabnikash.app.data.db.ProductAggregate
 import com.hisabnikash.app.data.db.ProductEntity
@@ -58,11 +71,14 @@ import com.hisabnikash.app.ui.components.MoneyField
 import com.hisabnikash.app.ui.components.ScreenFrame
 import com.hisabnikash.app.ui.components.SectionHeader
 import com.hisabnikash.app.ui.components.StatusChip
+import com.hisabnikash.app.ui.theme.BrandGreenSoft
+import com.hisabnikash.app.ui.theme.InkFaint
+import com.hisabnikash.app.ui.theme.Spacing
 import com.hisabnikash.app.ui.nav.Routes
 import com.hisabnikash.app.ui.theme.BrandGreen
-import com.hisabnikash.app.ui.theme.InkFaint
 import com.hisabnikash.app.ui.theme.Warning
 import com.hisabnikash.app.ui.theme.Error
+import java.io.File
 import com.hisabnikash.app.ui.vm.appViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -207,7 +223,11 @@ fun ProductsTab(container: AppContainer, navController: NavHostController) {
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(state.products, key = { it.product.id }) { agg ->
-                        ProductRow(agg, onClick = { navController.navigate(Routes.product(agg.product.id)) })
+                        ProductRow(
+                            agg,
+                            onClick = { navController.navigate(Routes.product(agg.product.id)) },
+                            store = container.productImageStore
+                        )
                     }
                 }
             }
@@ -216,7 +236,11 @@ fun ProductsTab(container: AppContainer, navController: NavHostController) {
 }
 
 @Composable
-fun ProductRow(agg: ProductAggregate, onClick: () -> Unit) {
+fun ProductRow(
+    agg: ProductAggregate,
+    onClick: () -> Unit,
+    store: com.hisabnikash.app.data.media.ProductImageStore
+) {
     val product = agg.product
     ElevatedCard(
         onClick = onClick,
@@ -227,6 +251,8 @@ fun ProductRow(agg: ProductAggregate, onClick: () -> Unit) {
             Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            ProductThumbnail(product, store, Modifier)
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -302,6 +328,7 @@ data class ProductForm(
     val description: String = "",
     val notes: String = "",
     val status: String = "ACTIVE",
+    val imagePath: String? = null,
     val variants: List<VariantDraft> = emptyList(),
     val suppliers: List<DropOption> = emptyList(),
     val saving: Boolean = false,
@@ -350,7 +377,8 @@ class ProductFormViewModel(container: AppContainer, private val productId: Long)
             supplierId = product.supplierId,
             description = product.description ?: "",
             notes = product.notes ?: "",
-            status = product.status
+            status = product.status,
+            imagePath = product.imagePath
         )
     }
 
@@ -365,6 +393,12 @@ class ProductFormViewModel(container: AppContainer, private val productId: Long)
     fun setDescription(v: String) = { form.value = form.value.copy(description = v) }()
     fun setNotes(v: String) = { form.value = form.value.copy(notes = v) }()
     fun setStatus(v: String) = { form.value = form.value.copy(status = v) }()
+
+    fun setImagePath(path: String?) {
+        val old = form.value.imagePath
+        if (old != null && old != path) container.productImageStore.delete(old)
+        form.value = form.value.copy(imagePath = path)
+    }
 
     fun addVariant() {
         val f = form.value
@@ -406,7 +440,8 @@ class ProductFormViewModel(container: AppContainer, private val productId: Long)
                         supplierId = f.supplierId,
                         description = f.description.ifBlank { null },
                         notes = f.notes.ifBlank { null },
-                        status = f.status
+                        status = f.status,
+                        imagePath = f.imagePath
                     ),
                     f.variants.map {
                         ProductVariantEntity(
@@ -446,6 +481,13 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
             return@ScreenFrame
         }
         AppTextField("Product name", state.name, { vm.setName(it) }, placeholder = "e.g. Cotton Kurti")
+        if (productId == null || state.loaded) {
+            ProductImageSection(
+                imagePath = state.imagePath,
+                onImage = { vm.setImagePath(it) },
+                store = container.productImageStore
+            )
+        }
         Row(Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) { AppTextField("SKU", state.sku, { vm.setSku(it) }, placeholder = "SKU-001") }
             Column(Modifier.weight(1f)) { AppTextField("Category", state.category, { vm.setCategory(it) }, placeholder = "Clothing") }
@@ -553,6 +595,193 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
 }
 
 // ---------------------------------------------------------------------------
+// Product image
+// ---------------------------------------------------------------------------
+
+/** Compact list thumbnail: real photo when set, neutral icon otherwise. */
+@Composable
+private fun ProductThumbnail(
+    product: ProductEntity,
+    store: com.hisabnikash.app.data.media.ProductImageStore,
+    modifier: Modifier
+) {
+    val image = store.file(product.imagePath)
+    if (image != null) {
+        AsyncImage(
+            model = image,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(10.dp))
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .size(48.dp)
+                .background(BrandGreenSoft, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Inventory2,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Professional product-image workflow: gallery (photo picker — no permission
+ * needed on Android 13+ and gracefully falling back on older versions),
+ * camera capture, replace, remove and preview. Images are imported into
+ * app-internal storage by [com.hisabnikash.app.data.media.ProductImageStore]
+ * and rendered through Coil, which downsamples to the view size.
+ */
+@Composable
+private fun ProductImageSection(
+    imagePath: String?,
+    onImage: (String?) -> Unit,
+    store: com.hisabnikash.app.data.media.ProductImageStore
+) {
+    val context = LocalContext.current
+    var cameraTarget by remember { mutableStateOf<java.io.File?>(null) }
+
+    val gallery = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            val stored = store.import(uri)
+            if (stored != null) onImage(stored)
+        }
+    }
+    val camera = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val file = cameraTarget
+        cameraTarget = null
+        if (success && file != null) {
+            val stored = store.importCamera(file)
+            if (stored != null) onImage(stored)
+        } else {
+            file?.delete()
+        }
+    }
+
+    SectionHeader("Product image")
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.ScreenMargin, vertical = 6.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(Modifier.padding(Spacing.Lg)) {
+            if (imagePath == null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(BrandGreenSoft, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.AddAPhoto,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(Spacing.Lg))
+                    Column(Modifier.weight(1f)) {
+                        Text("Add product photo", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Photos stay on this device and help you recognise products fast.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = InkFaint
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.Lg))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
+                    OutlinedButton(
+                        onClick = {
+                            gallery.launch(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Add photo")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            val dir = File(context.cacheDir, "shared").apply { mkdirs() }
+                            val file = File(dir, "camera_${System.currentTimeMillis()}.jpg")
+                            val uri = FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                file
+                            )
+                            cameraTarget = file
+                            camera.launch(uri)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Take photo")
+                    }
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = store.file(imagePath),
+                        contentDescription = "Product photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                    Spacer(Modifier.width(Spacing.Lg))
+                    Column(Modifier.weight(1f)) {
+                        Text("Photo added", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Shown in product lists and on the product page.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = InkFaint
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.Lg))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
+                    OutlinedButton(
+                        onClick = {
+                            gallery.launch(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Replace")
+                    }
+                    OutlinedButton(
+                        onClick = { onImage(null) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Remove")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Product detail
 // ---------------------------------------------------------------------------
 
@@ -617,6 +846,18 @@ fun ProductDetailRoute(container: AppContainer, navController: NavHostController
         if (product == null) {
             Text("Product not found.", color = InkFaint, modifier = Modifier.padding(16.dp))
             return@ScreenFrame
+        }
+        container.productImageStore.file(product.imagePath)?.let { image ->
+            AsyncImage(
+                model = image,
+                contentDescription = "Photo of ${product.name}",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.ScreenMargin, vertical = 6.dp)
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(14.dp))
+            )
         }
         SectionHeader("Performance")
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {

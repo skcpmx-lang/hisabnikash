@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.hisabnikash.app.data.db.AppDatabase
 import com.hisabnikash.app.data.db.DatabaseMigrations
+import com.hisabnikash.app.data.media.ProductImageStore
 import com.hisabnikash.app.data.prefs.AppPreferences
 import com.hisabnikash.app.data.repo.BackupRepository
 import com.hisabnikash.app.data.repo.CatalogRepository
@@ -32,6 +33,8 @@ class AppContainer(context: Context) {
         .build()
 
     val prefs: AppPreferences = AppPreferences(appContext)
+
+    val productImageStore: ProductImageStore = ProductImageStore(appContext)
 
     val workspaceRepository: WorkspaceRepository = WorkspaceRepository(database, prefs)
     val catalogRepository: CatalogRepository = CatalogRepository(database, workspaceRepository)
