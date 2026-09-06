@@ -41,6 +41,7 @@ import com.hisabnikash.app.ui.notifications.NotificationsScreenRoute
 import com.hisabnikash.app.ui.onboarding.OnboardingScreen
 import com.hisabnikash.app.ui.orders.OrderDetailRoute
 import com.hisabnikash.app.ui.orders.OrderFormRoute
+import com.hisabnikash.app.ui.orders.OrdersByStatusRoute
 import com.hisabnikash.app.ui.products.ProductDetailRoute
 import com.hisabnikash.app.ui.products.ProductFormRoute
 import com.hisabnikash.app.ui.root.BootScreen
@@ -70,6 +71,8 @@ object Routes {
     const val BOOT = "boot"
     const val ONBOARDING = "onboarding"
     const val MAIN = "main"
+    const val ORDER_STATUS = "orders/status/{status}"
+    fun ordersFor(status: String) = "orders/status/$status"
 
     const val ORDER = "order/{id}"
     const val NEW_ORDER = "order/new"
@@ -179,6 +182,12 @@ fun HisabNavGraph(container: AppContainer) {
         }
         composable(Routes.MAIN) {
             MainShell(container, navController)
+        }
+        composable(
+            Routes.ORDER_STATUS,
+            arguments = listOf(navArgument("status") { type = NavType.StringType })
+        ) { entry ->
+            OrdersByStatusRoute(container, navController, entry.arguments?.getString("status") ?: "ALL")
         }
         composable(
             Routes.ORDER,

@@ -3,11 +3,13 @@ package com.hisabnikash.app.ui.orders
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,6 +46,7 @@ import com.hisabnikash.app.domain.model.formatDateTime
 import com.hisabnikash.app.domain.model.formatMoney
 import com.hisabnikash.app.ui.components.EmptyState
 import com.hisabnikash.app.ui.components.FilterChips
+import com.hisabnikash.app.ui.components.ScreenFrame
 import com.hisabnikash.app.ui.components.StatusChip
 import com.hisabnikash.app.ui.components.orderStatusColor
 import com.hisabnikash.app.ui.nav.Routes
@@ -67,13 +70,13 @@ data class OrdersUi(
     val channels: Map<Long, String> = emptyMap()
 )
 
-class OrdersListViewModel(container: AppContainer) : ViewModel() {
+class OrdersListViewModel(container: AppContainer, initialStatus: String = "ALL") : ViewModel() {
 
     private val repo = container.orderRepository
     private val catalog = container.catalogRepository
     private val finance = container.financeRepository
 
-    private val statusFlow = kotlinx.coroutines.flow.MutableStateFlow("ALL")
+    private val statusFlow = kotlinx.coroutines.flow.MutableStateFlow(initialStatus)
     private val queryFlow = kotlinx.coroutines.flow.MutableStateFlow("")
 
     val state: StateFlow<OrdersUi> = container.prefs.activeBusinessId
@@ -114,14 +117,63 @@ class OrdersListViewModel(container: AppContainer) : ViewModel() {
     }
 }
 
+private val ORDER_STATUSES = listOf(
+    "ALL", "DRAFT", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED",
+    "DELIVERED", "RETURNED", "CANCELLED"
+)
+
+@Composable
+private fun OrdersBody(
+    state: OrdersUi,
+    navController: NavHostController,
+    onQuery: (String) -> Unit,
+    onStatus: (String) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    OutlinedTextField(
+        value = query,
+        onValueChange = { query = it; onQuery(it) },
+        placeholder = { Text("Search order number or product") },
+        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+    )
+    FilterChips(ORDER_STATUSES, state.status, onStatus)
+    if (state.orders.isEmpty()) {
+        EmptyState(
+            Icons.Filled.Article,
+            if (state.query.isBlank()) "No orders yet" else "No matches found",
+            if (state.query.isBlank())
+                "Add your first order to start tracking sales and profit."
+            else "Try a different search term or status.",
+            actionLabel = if (state.query.isBlank()) "Create Order" else null,
+            onAction = { navController.navigate(Routes.NEW_ORDER) }
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            items(state.orders, key = { it.id }) { order ->
+                OrderRow(
+                    order,
+                    customerName = order.customerId?.let { state.customerNames[it] },
+                    channelName = order.channelId?.let { state.channels[it] },
+                    onClick = { navController.navigate(Routes.order(order.id)) }
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun OrdersTab(container: AppContainer, navController: NavHostController) {
     val vm = appViewModel(container) { OrdersListViewModel(it) }
     val state by vm.state.collectAsState()
-    var query by remember { mutableStateOf("") }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets.safeDrawing,
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate(Routes.NEW_ORDER) },
@@ -141,45 +193,28 @@ fun OrdersTab(container: AppContainer, navController: NavHostController) {
                     modifier = Modifier.weight(1f)
                 )
             }
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it; vm.setQuery(it) },
-                placeholder = { Text("Search order number or product") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-            FilterChips(
-                listOf("ALL", "DRAFT", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "RETURNED", "CANCELLED"),
-                state.status,
-                { vm.setStatus(it) }
-            )
-            if (state.orders.isEmpty()) {
-                EmptyState(
-                    Icons.Filled.Article,
-                    if (state.query.isBlank()) "No orders yet" else "No matches found",
-                    if (state.query.isBlank())
-                        "Add your first order to start tracking sales and profit."
-                    else "Try a different search term or status.",
-                    actionLabel = if (state.query.isBlank()) "Create Order" else null,
-                    onAction = { navController.navigate(Routes.NEW_ORDER) }
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    items(state.orders, key = { it.id }) { order ->
-                        OrderRow(
-                            order,
-                            customerName = order.customerId?.let { state.customerNames[it] },
-                            channelName = order.channelId?.let { state.channels[it] },
-                            onClick = { navController.navigate(Routes.order(order.id)) }
-                        )
-                    }
-                }
-            }
+            OrdersBody(state, navController, vm::setQuery, vm::setStatus)
         }
+    }
+}
+
+/**
+ * Full-screen orders list opened from the dashboard funnel with an initial
+ * status already applied. Back returns to the dashboard.
+ */
+@Composable
+fun OrdersByStatusRoute(container: AppContainer, navController: NavHostController, status: String) {
+    val vm = appViewModel(container, key = "orders-status-$status") {
+        OrdersListViewModel(it, initialStatus = status)
+    }
+    val state by vm.state.collectAsState()
+
+    ScreenFrame(
+        title = "${status.replaceFirstChar { it.uppercase() }} orders",
+        onBack = { navController.popBackStack() },
+        scroll = false
+    ) {
+        OrdersBody(state, navController, vm::setQuery, vm::setStatus)
     }
 }
 

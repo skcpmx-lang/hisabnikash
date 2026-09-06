@@ -1,5 +1,7 @@
 package com.hisabnikash.app.ui.home
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +15,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
@@ -28,6 +34,7 @@ import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +55,11 @@ import androidx.navigation.NavHostController
 import com.hisabnikash.app.data.container.AppContainer
 import com.hisabnikash.app.data.repo.MetricsBundle
 import com.hisabnikash.app.data.repo.PeriodControl
+import com.hisabnikash.app.domain.model.HealthEvaluator
+import com.hisabnikash.app.domain.model.HealthIndicator
+import com.hisabnikash.app.domain.model.HealthSnapshot
+import com.hisabnikash.app.domain.model.HealthVerdict
+import com.hisabnikash.app.domain.model.SignalLevel
 import com.hisabnikash.app.domain.model.MoneyScale
 import com.hisabnikash.app.domain.model.formatMoney
 import com.hisabnikash.app.domain.model.formatPercent
@@ -60,11 +72,13 @@ import com.hisabnikash.app.ui.components.MetricCard
 import com.hisabnikash.app.ui.components.QuickActionTile
 import com.hisabnikash.app.ui.components.SectionHeader
 import com.hisabnikash.app.ui.components.SkeletonCard
-import com.hisabnikash.app.ui.components.StatusChip
 import com.hisabnikash.app.ui.nav.Routes
 import com.hisabnikash.app.ui.theme.BrandGold
 import com.hisabnikash.app.ui.theme.BrandGreen
+import com.hisabnikash.app.ui.theme.BrandGreenSoft
 import com.hisabnikash.app.ui.theme.InkFaint
+import com.hisabnikash.app.ui.theme.Spacing
+import com.hisabnikash.app.ui.theme.SurfaceTint
 import com.hisabnikash.app.ui.vm.appViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -85,8 +99,6 @@ import java.util.Locale
 
 data class PriorityItem(val label: String, val detail: String, val route: String)
 
-data class HealthStatus(val score: Int, val label: String, val note: String)
-
 data class HomeUiState(
     val loading: Boolean = true,
     val businessId: Long = 0,
@@ -101,7 +113,7 @@ data class HomeUiState(
     val outOfStock: List<com.hisabnikash.app.data.db.ProductEntity> = emptyList(),
     val processing: List<com.hisabnikash.app.data.db.OrderEntity> = emptyList(),
     val unread: Long = 0,
-    val health: HealthStatus? = null,
+    val health: HealthVerdict? = null,
     val priorities: List<PriorityItem> = emptyList()
 )
 
@@ -180,7 +192,24 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
                 outOfStock = counter.out,
                 processing = counter.processing,
                 unread = counter.unread,
-                health = computeHealth(metrics, previous),
+                health = HealthEvaluator.evaluate(
+                    HealthSnapshot(
+                        revenueMinor = metrics.revenueMinor,
+                        previousRevenueMinor = previous.revenueMinor,
+                        marginBps = metrics.marginBps,
+                        expensesMinor = metrics.expensesMinor,
+                        codPendingMinor = metrics.codPendingMinor,
+                        payablesMinor = metrics.payablesMinor,
+                        availableCashMinor = metrics.availableCashMinor,
+                        returnRateBps = metrics.returnRateBps,
+                        orderCount = metrics.orderCount,
+                        deliveredCount = metrics.deliveredCount,
+                        lowStockCount = counter.low.size.toLong(),
+                        outOfStockCount = counter.out.size.toLong(),
+                        adSpendMinor = metrics.adSpendMinor,
+                        roasBps = metrics.roasBps
+                    )
+                ),
                 priorities = priorities
             )
         }
@@ -299,6 +328,7 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     MetricCard("Available cash", formatMoney(state.metrics.availableCashMinor), Modifier.weight(1f))
                     MetricCard("COD pending", formatMoney(state.metrics.codPendingMinor), Modifier.weight(1f))
+                    MetricCard("Receivables", formatMoney(state.metrics.receivablesMinor), Modifier.weight(1f))
                 }
             }
         }
@@ -341,29 +371,8 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
 
         item {
             SectionHeader("Order funnel")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        listOf("Draft", "Confirmed", "Processing", "Packed", "Shipped", "Delivered", "Returned", "Cancelled")
-                            .forEach { status ->
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "${state.counts[status.uppercase()] ?: 0}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Text(status, style = MaterialTheme.typography.labelSmall, color = InkFaint, maxLines = 1)
-                                }
-                            }
-                    }
-                    Row(Modifier.padding(top = 8.dp)) {
-                        StatusChip("Live database counts", BrandGreen)
-                    }
-                }
+            OrderFunnelCard(state.counts) { status ->
+                navController.navigate(Routes.ordersFor(status))
             }
         }
 
@@ -393,40 +402,7 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
 
         item {
             SectionHeader("Business health")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    val health = state.health
-                    if (health == null) {
-                        Text("Not enough data", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Record orders to unlock your business health indicator.",
-                            style = MaterialTheme.typography.bodyMedium, color = InkFaint
-                        )
-                    } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "${health.score}",
-                                style = MaterialTheme.typography.displaySmall,
-                                color = BrandGold,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Column {
-                                Text(health.label, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    health.note,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = InkFaint,
-                                    maxLines = 2
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            BusinessHealthCard(state.health)
         }
 
         item {
@@ -488,42 +464,232 @@ private fun deltaLabel(current: Long, previous: Long): String {
     return if (delta >= 0) "+$delta% vs previous" else "$delta% vs previous"
 }
 
-private fun computeHealth(current: MetricsBundle, previous: MetricsBundle): HealthStatus {
-    val score = computeHealthScore(current, previous)
-    val label = when {
-        score >= 85 -> "Excellent"
-        score >= 65 -> "Good"
-        score >= 40 -> "Needs attention"
-        else -> "At risk"
+// ---------------------------------------------------------------------------
+// Order funnel — full labels, live counts, tap-to-filter
+// ---------------------------------------------------------------------------
+
+private val PIPELINE_STATUSES = listOf("DRAFT", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED")
+private val EXCEPTION_STATUSES = listOf("RETURNED", "CANCELLED")
+
+@Composable
+private fun OrderFunnelCard(counts: Map<String, Long>, onStage: (String) -> Unit) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.ScreenMargin, vertical = 6.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(Modifier.padding(Spacing.Lg)) {
+            Text(
+                "Sales pipeline",
+                style = MaterialTheme.typography.labelMedium,
+                color = InkFaint
+            )
+            Spacer(Modifier.height(Spacing.Sm))
+            // Scrollable rail: every stage keeps its FULL label at a readable
+            // size; nothing is truncated, squeezed or ellipsized.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                PIPELINE_STATUSES.forEachIndexed { index, status ->
+                    FunnelStage(
+                        status = status,
+                        count = counts[status] ?: 0,
+                        onClick = { onStage(status) }
+                    )
+                    if (index < PIPELINE_STATUSES.lastIndex) {
+                        Icon(
+                            Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = InkFaint,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .align(Alignment.CenterVertically)
+                                .padding(horizontal = 2.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(Spacing.Md))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(Spacing.Md))
+            Text(
+                "Exception states",
+                style = MaterialTheme.typography.labelMedium,
+                color = InkFaint
+            )
+            Spacer(Modifier.height(Spacing.Sm))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
+                EXCEPTION_STATUSES.forEach { status ->
+                    Surface(
+                        onClick = { onStage(status) },
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, orderStatusColor(status).copy(alpha = 0.4f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(8.dp)
+                                    .background(orderStatusColor(status), CircleShape)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "${status.replaceFirstChar { it.uppercase() }} (${counts[status] ?: 0})",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
-    val note = when {
-        score >= 85 -> "Revenue and profit are tracking well. Keep the momentum."
-        score >= 65 -> "Steady performance with room to improve margins or cash flow."
-        score >= 40 -> "Check costs, pending COD and stock levels to protect profit."
-        else -> "Several signals are weak. Review expenses and outstanding cash today."
-    }
-    return HealthStatus(score, label, note)
 }
 
-private fun computeHealthScore(current: MetricsBundle, previous: MetricsBundle): Int {
-    var score = 70
-    if (current.revenueMinor > 0) {
-        score += when {
-            previous.revenueMinor == 0L -> 5
-            current.revenueMinor >= previous.revenueMinor -> 5
-            current.revenueMinor >= previous.revenueMinor * 8 / 10 -> 0
-            else -> -10
+@Composable
+private fun FunnelStage(status: String, count: Long, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.width(84.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(8.dp)
+                        .background(orderStatusColor(status), CircleShape)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "$count",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            // Full status name. No maxLines, no ellipsis, no truncation.
+            Text(
+                status.replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
-    } else if (previous.revenueMinor > 0) {
-        score -= 15
     }
-    if (current.marginBps >= 2_500) score += 10
-    else if (current.marginBps >= 1_200) score += 5
-    else if (current.marginBps in 1..1_199) score -= 5
-    if (current.codPendingMinor > 0) score -= 5
-    if (current.payablesMinor > current.revenueMinor && current.revenueMinor > 0) score -= 10
-    if (current.returnRateBps > 1_500) score -= 5
-    return score.coerceIn(0, 100)
+}
+
+// ---------------------------------------------------------------------------
+// Business health — transparent, data-driven internal indicator
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun BusinessHealthCard(health: HealthVerdict?) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.ScreenMargin, vertical = 6.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(Modifier.padding(Spacing.Lg)) {
+            if (health == null) {
+                Text("Not enough data", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(Spacing.Sm))
+                Text(
+                    "Business health is computed from your own transactions. Record orders, expenses and stock movement to unlock your indicator.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkFaint
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "${health.score}",
+                        style = MaterialTheme.typography.displaySmall,
+                        color = BrandGold,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.width(Spacing.Lg))
+                    Column {
+                        Text(health.label, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            health.note,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = InkFaint,
+                            maxLines = 2
+                        )
+                        health.trendLabel?.let {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(Spacing.Lg))
+                health.indicators.chunked(2).forEach { rowIndicators ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)
+                    ) {
+                        rowIndicators.forEach { indicator ->
+                            HealthIndicatorTile(indicator, Modifier.weight(1f))
+                        }
+                    }
+                    Spacer(Modifier.height(Spacing.Sm))
+                }
+                Spacer(Modifier.height(Spacing.Xs))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(Spacing.Sm))
+                Text(
+                    "Internal business-health indicator based on your current data. Not a credit, bank or financial rating.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = InkFaint
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthIndicatorTile(indicator: HealthIndicator, modifier: Modifier = Modifier) {
+    val dotColor = when (indicator.level) {
+        SignalLevel.GOOD -> BrandGreen
+        SignalLevel.FAIR -> BrandGold
+        SignalLevel.WATCH -> MaterialTheme.colorScheme.error
+    }
+    Column(
+        modifier = modifier
+            .background(SurfaceTint, MaterialTheme.shapes.small)
+            .padding(horizontal = 10.dp, vertical = 10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(7.dp).background(dotColor, CircleShape))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                indicator.label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            indicator.value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
 }
 
 private fun hourLabel(hour: Int): String {
