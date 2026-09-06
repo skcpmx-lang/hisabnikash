@@ -1,5 +1,10 @@
 package com.hisabnikash.app.ui.orders
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,11 +16,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Reply
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -31,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -175,6 +183,59 @@ fun OrderDetailRoute(container: AppContainer, navController: NavHostController, 
         val costs = CommerceMath.orderCosts(order)
         val profit = revenue - cogs - costs
         val items = state.order?.items ?: emptyList()
+        val context = LocalContext.current
+        val orderSummary = buildString {
+            appendLine("${order.orderNo} — ${order.status}")
+            appendLine("Date: ${formatDateTime(order.orderDate)}")
+            appendLine("Customer: ${state.customerName ?: "Walk-in customer"}")
+            appendLine("Channel: ${state.channelName ?: "—"}")
+            appendLine("Courier: ${state.courierName ?: "—"}")
+            order.trackingNo?.let { appendLine("Tracking: $it") }
+            appendLine("")
+            items.forEach { item ->
+                appendLine("${item.qty} × ${item.name} — ${formatMoney(item.lineTotalMinor)}")
+            }
+            appendLine("")
+            appendLine("Subtotal: ${formatMoney(order.subtotalMinor)}")
+            if (order.discountMinor > 0) appendLine("Discount: -${formatMoney(order.discountMinor)}")
+            if (order.deliveryChargeMinor > 0) appendLine("Delivery: ${formatMoney(order.deliveryChargeMinor)}")
+            appendLine("Total: ${formatMoney(total)}")
+            appendLine("Payment: ${order.paymentMethod} (advance ${formatMoney(order.advanceMinor)}${if (order.codMinor > 0) ", COD ${formatMoney(order.codMinor)}" else ""})")
+        }
+
+        SectionHeader("Share")
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, order.orderNo)
+                        putExtra(Intent.EXTRA_TEXT, orderSummary)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Share order"))
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Filled.Share, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("Share")
+            }
+            OutlinedButton(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText(order.orderNo, orderSummary))
+                    Toast.makeText(context, "Order ${order.orderNo} copied", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Filled.ContentCopy, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("Copy")
+            }
+        }
 
         SectionHeader("Order")
         ElevatedCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
@@ -292,12 +353,12 @@ fun OrderDetailRoute(container: AppContainer, navController: NavHostController, 
 
         SectionHeader("Money actions")
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { navController.navigate(Routes.NEW_RETURN) }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { navController.navigate(Routes.returnForOrder(order.id)) }, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Reply, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
                 Text("Return")
             }
-            OutlinedButton(onClick = { navController.navigate(Routes.NEW_EXCHANGE) }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { navController.navigate(Routes.exchangeForOrder(order.id)) }, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.CurrencyExchange, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
                 Text("Exchange")
@@ -305,7 +366,7 @@ fun OrderDetailRoute(container: AppContainer, navController: NavHostController, 
         }
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { navController.navigate(Routes.NEW_REFUND) }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = { navController.navigate(Routes.refundForOrder(order.id)) }, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Replay, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
                 Text("Refund")
