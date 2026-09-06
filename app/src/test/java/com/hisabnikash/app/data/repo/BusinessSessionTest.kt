@@ -13,7 +13,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -81,6 +80,9 @@ class BusinessSessionTest {
 
     private fun session(store: FakeStore, dao: FakeWorkspaceDao) = BusinessSession(store, dao)
 
+    private suspend fun exceptionOf(block: suspend () -> Unit): Throwable =
+        runCatching { block() }.exceptionOrNull()!!
+
     @Test
     fun `valid preferred business is used`() = runTest {
         val store = FakeStore()
@@ -118,9 +120,8 @@ class BusinessSessionTest {
         val store = FakeStore()
         val dao = FakeWorkspaceDao()
         store.setActiveBusiness(42L) // stale AND nothing to fall back to
-        val ex = assertThrows(IllegalStateException::class.java) {
-            session(store, dao).requireActive()
-        }
+        val ex = exceptionOf { session(store, dao).requireActive() }
+        assertTrue(ex is IllegalStateException)
         assertTrue(ex.message!!.contains("Select or create a business"))
     }
 
@@ -149,18 +150,16 @@ class BusinessSessionTest {
 
     @Test
     fun `repository guard rejects zero business id`() = runTest {
-        val ex = assertThrows(IllegalStateException::class.java) {
-            session(FakeStore(), FakeWorkspaceDao()).requireExists(0L)
-        }
+        val ex = exceptionOf { session(FakeStore(), FakeWorkspaceDao()).requireExists(0L) }
+        assertTrue(ex is IllegalStateException)
         assertTrue(ex.message!!.contains("Select or create a business"))
     }
 
     @Test
     fun `repository guard rejects unknown business id`() = runTest {
         val dao = FakeWorkspaceDao().apply { seed(1L) }
-        val ex = assertThrows(IllegalStateException::class.java) {
-            session(FakeStore(), dao).requireExists(12345L)
-        }
+        val ex = exceptionOf { session(FakeStore(), dao).requireExists(12345L) }
+        assertTrue(ex is IllegalStateException)
         assertTrue(ex.message!!.contains("no longer exists"))
     }
 
