@@ -1,0 +1,23 @@
+runner: Linux runnervmejwal 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+time: Sun Sep  6 08:54:16 UTC 2026
+jdk: openjdk version "17.0.20.1" 2026-08-18
+OpenJDK Runtime Environment Temurin-17.0.20.1+1 (build 17.0.20.1+1)
+sdk: /usr/local/lib/android/sdk
+build-tools
+cmake
+cmdline-tools
+extras
+licenses
+ndk
+packages-list.txt
+platform-tools
+platforms
+ref: arena/01a075df-hisabnikash
+total 28
+drwxr-xr-x 4 runner runner 4096 Sep  6 08:54 .
+drwxr-xr-x 3 runner runner 4096 Sep  6 08:54 ..
+drwxr-xr-x 7 runner runner 4096 Sep  6 08:54 .git
+drwxr-xr-x 3 runner runner 4096 Sep  6 08:54 .github
+-rw-r--r-- 1 runner runner   14 Sep  6 08:54 README.md
+-rw-r--r-- 1 runner runner  427 Sep  6 08:54 probe.txt
+-rw-r--r-- 1 runner runner   25 Sep  6 08:54 test-push.txt
