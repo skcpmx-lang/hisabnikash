@@ -1,0 +1,11 @@
+name: Probe
+on: push
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello > hello.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: probe
+          path: hello.txt
