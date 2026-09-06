@@ -44,6 +44,7 @@ import com.hisabnikash.app.ui.theme.BrandGold
 import com.hisabnikash.app.ui.theme.BrandGreen
 import com.hisabnikash.app.ui.theme.ChartSeries
 import com.hisabnikash.app.ui.theme.InkFaint
+import com.hisabnikash.app.ui.theme.SurfaceAlt
 import java.util.Locale
 
 data class ChartPoint(val label: String, val value: Float, val detail: String? = null)
@@ -344,19 +345,19 @@ fun DonutChart(
 fun HealthGauge(
     score: Int,
     modifier: Modifier = Modifier,
-    size: Dp = 132.dp
+    gaugeSize: Dp = 132.dp
 ) {
-    val track = MaterialTheme.colorScheme.surfaceAlt
+    val track = SurfaceAlt
     val progressColor = when {
         score >= 70 -> BrandGreen
         score >= 50 -> BrandGold
         else -> MaterialTheme.colorScheme.error
     }
-    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.size(gaugeSize), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 12.dp.toPx()
             val inset = stroke / 2 + 2.dp.toPx()
-            val arcSize = Size(size.width - inset * 2, size.height - inset * 2)
+            val arcSize = Size(this.size.width - inset * 2, this.size.height - inset * 2)
             val topLeft = Offset(inset, inset)
             drawArc(
                 color = track,

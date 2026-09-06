@@ -277,7 +277,7 @@ fun MoreTab(container: AppContainer, navController: NavHostController) {
                             Text(link.subtitle, style = MaterialTheme.typography.bodySmall, color = InkFaint, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                         androidx.compose.material3.Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            Icons.Filled.ChevronRight,
                             contentDescription = null,
                             tint = InkFaint
                         )

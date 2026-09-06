@@ -626,7 +626,7 @@ private fun DashboardHero(state: HomeUiState) {
             Spacer(Modifier.height(Spacing.Md))
             Text(
                 formatMoney(metrics.revenueMinor),
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
@@ -639,9 +639,9 @@ private fun DashboardHero(state: HomeUiState) {
             )
             Spacer(Modifier.height(Spacing.Xxl))
             Row {
-                HeroStat("Net profit", formatMoney(metrics.netProfitMinor), trailing = true, Modifier.weight(1f))
+                HeroStat("Net profit", formatMoney(metrics.netProfitMinor), Modifier.weight(1f), trailing = true)
                 Box(Modifier.width(1.dp).height(36.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                HeroStat("Orders", "${metrics.deliveredCount}", trailing = true, Modifier.weight(1f))
+                HeroStat("Orders", "${metrics.deliveredCount}", Modifier.weight(1f), trailing = true)
             }
             Spacer(Modifier.height(Spacing.Lg))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -679,7 +679,7 @@ private fun HeroStat(
 }
 
 @Composable
-private fun InventoryStat(label: String, value: String) {
+private fun androidx.compose.foundation.layout.RowScope.InventoryStat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
         Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(label, style = MaterialTheme.typography.labelSmall, color = InkFaint)
