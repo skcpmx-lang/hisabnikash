@@ -15,7 +15,7 @@ private val Context.dataStore by preferencesDataStore(name = "hisabnikash_prefs"
  * App-level preferences. All monetary/business data lives in Room; this only
  * holds UI/session state and the optional local PIN.
  */
-class AppPreferences(context: Context) {
+class AppPreferences(context: Context) : ActiveBusinessStore {
 
     private val store = context.applicationContext.dataStore
 
@@ -45,6 +45,10 @@ class AppPreferences(context: Context) {
 
     suspend fun setActiveBusiness(id: Long) {
         store.edit { it[KEY_ACTIVE_BUSINESS] = id }
+    }
+
+    suspend fun clearActiveBusiness() {
+        store.edit { it.remove(KEY_ACTIVE_BUSINESS) }
     }
 
     suspend fun setOnboardingDone(done: Boolean) {

@@ -204,6 +204,7 @@ data class InvoiceFormUi(
 )
 
 class InvoiceFormViewModel(container: AppContainer, private val invoiceId: Long) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val db = container.database
     private val catalog = container.catalogRepository
@@ -281,7 +282,7 @@ class InvoiceFormViewModel(container: AppContainer, private val invoiceId: Long)
             val result = runCatching {
                 orders.createInvoice(
                     com.hisabnikash.app.data.repo.InvoiceInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         customerId = f.customerId,
                         dateAt = f.dateAt,
                         dueDateAt = f.dueDateAt,
@@ -618,7 +619,7 @@ fun InvoiceDetailRoute(container: AppContainer, navController: NavHostController
                                 val result = runCatching {
                                     container.orderRepository.recordPayment(
                                         com.hisabnikash.app.data.repo.PaymentInput(
-                                            businessId = state.businessId,
+                                            businessId = container.workspaceRepository.requireActiveBusiness(),
                                             customerId = invoice.customerId,
                                             invoiceId = invoice.id,
                                             accountId = payAccount,

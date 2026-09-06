@@ -415,7 +415,7 @@ fun OrderDetailRoute(container: AppContainer, navController: NavHostController, 
                             val result = runCatching {
                                 container.orderRepository.recordPayment(
                                     com.hisabnikash.app.data.repo.PaymentInput(
-                                        businessId = state.businessId,
+                                        businessId = container.workspaceRepository.requireActiveBusiness(),
                                         customerId = order.customerId,
                                         orderId = order.id,
                                         accountId = payAccount,

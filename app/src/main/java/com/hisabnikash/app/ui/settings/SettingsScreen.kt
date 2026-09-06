@@ -148,9 +148,10 @@ class SettingsViewModel(container: AppContainer) : ViewModel() {
         form.value = f.copy(saving = true, error = null, saved = false)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
             val result = runCatching {
+                val businessId = workspace.requireActiveBusiness()
                 workspace.updateBusiness(
                     BusinessEntity(
-                        id = f.businessId,
+                        id = businessId,
                         name = f.name.trim(),
                         category = f.category,
                         address = f.address.ifBlank { null },
@@ -161,7 +162,7 @@ class SettingsViewModel(container: AppContainer) : ViewModel() {
                 )
                 workspace.updateSettings(
                     BusinessSettingsEntity(
-                        businessId = f.businessId,
+                        businessId = businessId,
                         invoicePrefix = f.invoicePrefix.ifBlank { "INV-" },
                         invoiceFooter = f.invoiceFooter,
                         invoiceTerms = f.invoiceTerms,

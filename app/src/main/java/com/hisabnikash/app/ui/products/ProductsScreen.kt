@@ -342,6 +342,7 @@ data class ProductForm(
 )
 
 class ProductFormViewModel(private val container: AppContainer, private val productId: Long) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val catalog = container.catalogRepository
     private val form = MutableStateFlow(ProductForm())
@@ -435,7 +436,7 @@ class ProductFormViewModel(private val container: AppContainer, private val prod
                 catalog.saveProduct(
                     ProductEntity(
                         id = f.productId,
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         name = f.name.trim(),
                         sku = f.sku.ifBlank { null },
                         category = f.category.ifBlank { null },
@@ -451,7 +452,7 @@ class ProductFormViewModel(private val container: AppContainer, private val prod
                     ),
                     f.variants.map {
                         ProductVariantEntity(
-                            businessId = f.businessId,
+                            businessId = workspace.requireActiveBusiness(),
                             productId = f.productId,
                             name = it.name.ifBlank { "Variant" },
                             sku = it.sku.ifBlank { null },
@@ -949,7 +950,7 @@ fun ProductDetailRoute(container: AppContainer, navController: NavHostController
                             val result = runCatching {
                                 catalog.adjustStock(
                                     com.hisabnikash.app.data.repo.StockAdjustmentInput(
-                                        businessId = state.businessId,
+                                        businessId = container.workspaceRepository.requireActiveBusiness(),
                                         productId = product.id,
                                         newStockQty = qty,
                                         reason = reason.trim(),

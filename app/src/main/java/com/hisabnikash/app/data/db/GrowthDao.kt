@@ -59,6 +59,9 @@ interface ChannelDao {
 @Dao
 interface BudgetDao {
 
+    @Query("SELECT * FROM budgets WHERE id = :id")
+    suspend fun getById(id: Long): BudgetEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(budget: BudgetEntity): Long
 

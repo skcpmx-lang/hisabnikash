@@ -51,12 +51,22 @@ class CatalogRepository(private val db: AppDatabase, private val workspace: Work
 
     suspend fun getCustomer(id: Long) = db.customerDao().getById(id)
 
-    suspend fun saveCustomer(customer: CustomerEntity): Long =
-        if (customer.id == 0L) db.customerDao().insert(customer)
+    suspend fun saveCustomer(customer: CustomerEntity): Long {
+        workspace.requireBusinessExists(customer.businessId)
+        if (customer.id > 0) {
+            val existing = db.customerDao().getById(customer.id)
+            if (existing != null && existing.businessId != customer.businessId) {
+                throw IllegalStateException(
+                    "This customer belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        return if (customer.id == 0L) db.customerDao().insert(customer)
         else {
             db.customerDao().update(customer.copy(updatedAt = System.currentTimeMillis()))
             customer.id
         }
+    }
 
     // --------------------------------------------------------------- products
 
@@ -148,6 +158,11 @@ class CatalogRepository(private val db: AppDatabase, private val workspace: Work
     suspend fun adjustStock(input: StockAdjustmentInput) = db.withTransaction {
         require(input.reason.isNotBlank()) { "A meaningful reason is required for stock adjustment." }
         val product = db.productDao().getById(input.productId) ?: return@withTransaction
+        if (product.businessId != input.businessId) {
+            throw IllegalStateException(
+                "This product belongs to a different business. Switch business and try again."
+            )
+        }
         val delta = input.newStockQty - product.stockQty
         if (delta == 0L) return@withTransaction
         db.productDao().updateStock(input.productId, input.newStockQty)
@@ -176,16 +191,43 @@ class CatalogRepository(private val db: AppDatabase, private val workspace: Work
 
     suspend fun listSuppliers(businessId: Long) = db.supplierDao().listAll(businessId)
 
-    suspend fun saveSupplier(supplier: SupplierEntity): Long =
-        if (supplier.id == 0L) db.supplierDao().insert(supplier)
+    suspend fun saveSupplier(supplier: SupplierEntity): Long {
+        workspace.requireBusinessExists(supplier.businessId)
+        if (supplier.id > 0) {
+            val existing = db.supplierDao().getById(supplier.id)
+            if (existing != null && existing.businessId != supplier.businessId) {
+                throw IllegalStateException(
+                    "This supplier belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        return if (supplier.id == 0L) db.supplierDao().insert(supplier)
         else {
             db.supplierDao().update(supplier.copy(updatedAt = System.currentTimeMillis()))
             supplier.id
         }
+    }
 
     // ---------------------------------------------------------------- purchase
 
     suspend fun createPurchase(input: NewPurchaseInput): Long = db.withTransaction {
+        workspace.requireBusinessExists(input.businessId)
+        val supplier = db.supplierDao().getById(input.supplierId)
+            ?: throw IllegalStateException("The selected supplier no longer exists. Refresh and try again.")
+        if (supplier.businessId != input.businessId) {
+            throw IllegalStateException(
+                "The selected supplier belongs to a different business. Switch business and try again."
+            )
+        }
+        input.lines.forEach { line ->
+            val product = db.productDao().getById(line.productId)
+                ?: throw IllegalStateException("A product on this purchase no longer exists. Refresh and try again.")
+            if (product.businessId != input.businessId) {
+                throw IllegalStateException(
+                    "A product on this purchase belongs to a different business. Switch business and try again."
+                )
+            }
+        }
         val total = input.lines.sumOf { it.qty * it.unitCostMinor }.coerceAtLeast(0)
         val purchaseId = db.purchaseDao().insert(
             PurchaseEntity(

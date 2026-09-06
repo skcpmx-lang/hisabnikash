@@ -201,6 +201,7 @@ data class SupplierForm(
 )
 
 class SupplierFormViewModel(container: AppContainer, private val supplierId: Long) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val catalog = container.catalogRepository
     private val form = MutableStateFlow(SupplierForm())
@@ -263,7 +264,7 @@ class SupplierFormViewModel(container: AppContainer, private val supplierId: Lon
                 catalog.saveSupplier(
                     SupplierEntity(
                         id = f.supplierId,
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         name = f.name.trim(),
                         phone = f.phone.ifBlank { null },
                         email = f.email.ifBlank { null },
@@ -487,6 +488,7 @@ data class PurchaseForm(
 )
 
 class PurchaseFormViewModel(container: AppContainer) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val catalog = container.catalogRepository
     private val finance = container.financeRepository
@@ -579,7 +581,7 @@ class PurchaseFormViewModel(container: AppContainer) : ViewModel() {
             val result = runCatching {
                 catalog.createPurchase(
                     com.hisabnikash.app.data.repo.NewPurchaseInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         supplierId = f.supplierId,
                         dateAt = f.dateAt,
                         lines = f.lines.map {

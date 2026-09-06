@@ -25,6 +25,9 @@ interface WorkspaceDao {
     @Query("SELECT COUNT(*) FROM businesses")
     suspend fun businessCount(): Int
 
+    @Query("SELECT * FROM businesses ORDER BY createdAt DESC, id DESC LIMIT 1")
+    suspend fun latestBusiness(): BusinessEntity?
+
     @Query("DELETE FROM businesses WHERE id = :id")
     suspend fun deleteBusiness(id: Long)
 

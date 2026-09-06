@@ -36,7 +36,7 @@ data class ExpenseInput(
     val recurring: Boolean = false
 )
 
-class FinanceRepository(private val db: AppDatabase) {
+class FinanceRepository(private val db: AppDatabase, private val workspace: WorkspaceRepository) {
 
     // ---------------------------------------------------------------- accounts
 
@@ -46,12 +46,22 @@ class FinanceRepository(private val db: AppDatabase) {
 
     suspend fun listAccounts(businessId: Long) = db.accountDao().listAll(businessId)
 
-    suspend fun saveAccount(account: AccountEntity): Long =
-        if (account.id == 0L) db.accountDao().insert(account)
+    suspend fun saveAccount(account: AccountEntity): Long {
+        workspace.requireBusinessExists(account.businessId)
+        if (account.id > 0) {
+            val existing = db.accountDao().getById(account.id)
+            if (existing != null && existing.businessId != account.businessId) {
+                throw IllegalStateException(
+                    "This account belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        return if (account.id == 0L) db.accountDao().insert(account)
         else {
             db.accountDao().update(account)
             account.id
         }
+    }
 
     fun observeAccount(id: Long) = db.accountDao().observeById(id)
 
@@ -63,6 +73,7 @@ class FinanceRepository(private val db: AppDatabase) {
     fun observeTransfers(businessId: Long) = db.transferDao().observeAll(businessId)
 
     suspend fun recordTransfer(input: TransferInput) = db.withTransaction {
+        workspace.requireBusinessExists(input.businessId)
         require(input.fromAccountId != input.toAccountId) { "Choose two different accounts." }
         val transferId = db.transferDao().insert(
             TransferEntity(
@@ -109,6 +120,7 @@ class FinanceRepository(private val db: AppDatabase) {
         db.expenseDao().observeFiltered(businessId, category)
 
     suspend fun createExpense(input: ExpenseInput): Long = db.withTransaction {
+        workspace.requireBusinessExists(input.businessId)
         val expenseId = db.expenseDao().insert(
             ExpenseEntity(
                 businessId = input.businessId,
@@ -205,12 +217,22 @@ class FinanceRepository(private val db: AppDatabase) {
 
     fun observeCampaign(id: Long) = db.campaignDao().observeById(id)
 
-    suspend fun saveCampaign(campaign: CampaignEntity): Long =
-        if (campaign.id == 0L) db.campaignDao().insert(campaign)
+    suspend fun saveCampaign(campaign: CampaignEntity): Long {
+        workspace.requireBusinessExists(campaign.businessId)
+        if (campaign.id > 0) {
+            val existing = db.campaignDao().getById(campaign.id)
+            if (existing != null && existing.businessId != campaign.businessId) {
+                throw IllegalStateException(
+                    "This campaign belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        return if (campaign.id == 0L) db.campaignDao().insert(campaign)
         else {
             db.campaignDao().insert(campaign)
             campaign.id
         }
+    }
 
     fun observeChannels(businessId: Long) = db.channelDao().observeAll(businessId)
 
@@ -226,12 +248,22 @@ class FinanceRepository(private val db: AppDatabase) {
     fun observeBudgets(businessId: Long, category: String) =
         db.budgetDao().observeFiltered(businessId, category)
 
-    suspend fun saveBudget(budget: BudgetEntity): Long =
-        if (budget.id == 0L) db.budgetDao().insert(budget)
+    suspend fun saveBudget(budget: BudgetEntity): Long {
+        workspace.requireBusinessExists(budget.businessId)
+        if (budget.id > 0) {
+            val existing = db.budgetDao().getById(budget.id)
+            if (existing != null && existing.businessId != budget.businessId) {
+                throw IllegalStateException(
+                    "This budget belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        return if (budget.id == 0L) db.budgetDao().insert(budget)
         else {
             db.budgetDao().insert(budget)
             budget.id
         }
+    }
 
     // --------------------------------------------------------------------- misc
 

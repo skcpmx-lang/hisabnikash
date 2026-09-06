@@ -152,6 +152,7 @@ data class ReturnFormUi(
 )
 
 class ReturnFormViewModel(container: AppContainer, initialOrderId: Long? = null) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val db = container.database
     private val finance = container.financeRepository
@@ -233,7 +234,7 @@ class ReturnFormViewModel(container: AppContainer, initialOrderId: Long? = null)
             val result = runCatching {
                 orders.createReturn(
                     com.hisabnikash.app.data.repo.ReturnInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         orderId = f.selectedOrderId,
                         customerId = f.orders.firstOrNull { it.id == f.selectedOrderId }?.customerId,
                         reason = f.reason,
@@ -393,6 +394,7 @@ data class ExchangeFormUi(
 )
 
 class ExchangeFormViewModel(container: AppContainer, initialOrderId: Long? = null) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val db = container.database
     private val orders = container.orderRepository
@@ -461,7 +463,7 @@ class ExchangeFormViewModel(container: AppContainer, initialOrderId: Long? = nul
             val result = runCatching {
                 orders.createExchange(
                     com.hisabnikash.app.data.repo.ExchangeInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         orderId = f.selectedOrderId,
                         items = f.lines.map {
                             com.hisabnikash.app.data.repo.ExchangeInputItem(
@@ -571,6 +573,7 @@ data class RefundFormUi(
 )
 
 class RefundFormViewModel(container: AppContainer, initialOrderId: Long? = null) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val db = container.database
     private val finance = container.financeRepository
@@ -620,7 +623,7 @@ class RefundFormViewModel(container: AppContainer, initialOrderId: Long? = null)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
             val result = runCatching {
                 orders.createRefund(
-                    businessId = f.businessId,
+                    businessId = workspace.requireActiveBusiness(),
                     customerId = f.customerId,
                     orderId = f.selectedOrderId,
                     amountMinor = amount,

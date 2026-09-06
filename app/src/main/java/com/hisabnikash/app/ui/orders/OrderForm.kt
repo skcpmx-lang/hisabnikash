@@ -98,6 +98,7 @@ data class OrderFormUi(
 )
 
 class OrderFormViewModel(container: AppContainer) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val repo = container.orderRepository
     private val catalog = container.catalogRepository
@@ -194,7 +195,7 @@ class OrderFormViewModel(container: AppContainer) : ViewModel() {
             val result = runCatching {
                 repo.createOrder(
                     NewOrderInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         customerId = f.customerId,
                         channelId = f.channelId,
                         courierId = f.courierId,

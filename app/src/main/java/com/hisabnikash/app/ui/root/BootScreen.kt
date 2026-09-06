@@ -18,6 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +42,16 @@ import com.hisabnikash.app.ui.theme.InkFaint
 fun BootScreen(container: AppContainer, navController: NavHostController) {
     val onboardingDone by container.prefs.onboardingDone.collectAsState(initial = false)
     val activeBusiness by container.prefs.activeBusinessId.collectAsState(initial = null)
+    // Validates the remembered business id against the database BEFORE any
+    // navigation. A stale id (business deleted or database restored) is healed
+    // to the most recent existing business; with none left the session is
+    // cleared and the user is routed to business creation instead of the app
+    // shell, so no screen can ever write children under an orphan business.
+    var recovered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        container.workspaceRepository.recoverActiveBusiness()
+        recovered = true
+    }
 
     Box(
         modifier = Modifier
@@ -75,11 +88,13 @@ fun BootScreen(container: AppContainer, navController: NavHostController) {
                     }
                 }) { Text("Get started") }
             } else {
-                LaunchedEffect(Unit) {
-                    val security = container.securityRepository
-                    val secured = security.isPinSet() || security.isBiometricEnabled()
-                    navController.navigate(if (secured) Routes.SECURITY else Routes.MAIN) {
-                        popUpTo(Routes.BOOT) { inclusive = true }
+                LaunchedEffect(recovered) {
+                    if (recovered) {
+                        val security = container.securityRepository
+                        val secured = security.isPinSet() || security.isBiometricEnabled()
+                        navController.navigate(if (secured) Routes.SECURITY else Routes.MAIN) {
+                            popUpTo(Routes.BOOT) { inclusive = true }
+                        }
                     }
                 }
                 Text(

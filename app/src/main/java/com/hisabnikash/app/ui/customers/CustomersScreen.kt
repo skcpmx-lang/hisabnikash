@@ -253,6 +253,7 @@ data class CustomerForm(
 )
 
 class CustomerFormViewModel(container: AppContainer, private val customerId: Long) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val catalog = container.catalogRepository
     private val form = MutableStateFlow(CustomerForm())
@@ -333,7 +334,7 @@ class CustomerFormViewModel(container: AppContainer, private val customerId: Lon
                 catalog.saveCustomer(
                     CustomerEntity(
                         id = f.customerId,
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         name = f.name.trim(),
                         phone = f.phone.ifBlank { null },
                         email = f.email.ifBlank { null },

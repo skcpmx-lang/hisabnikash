@@ -306,6 +306,7 @@ data class PayForm(
 )
 
 class ReceivePaymentViewModel(container: AppContainer, private val receivableId: Long?) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val finance = container.financeRepository
     private val orders = container.orderRepository
@@ -367,7 +368,7 @@ class ReceivePaymentViewModel(container: AppContainer, private val receivableId:
             val result = runCatching {
                 orders.recordPayment(
                     com.hisabnikash.app.data.repo.PaymentInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         customerId = null,
                         receivableId = f.targetId,
                         accountId = f.accountId,
@@ -426,6 +427,7 @@ fun ReceivePaymentRoute(container: AppContainer, navController: NavHostControlle
 }
 
 class PayOutViewModel(container: AppContainer, private val payableId: Long?) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val finance = container.financeRepository
     private val orders = container.orderRepository
@@ -485,7 +487,7 @@ class PayOutViewModel(container: AppContainer, private val payableId: Long?) : V
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
             val result = runCatching {
                 orders.recordPayablePayment(
-                    businessId = f.businessId,
+                    businessId = workspace.requireActiveBusiness(),
                     payableId = f.targetId,
                     accountId = f.accountId,
                     amountMinor = amount,
@@ -635,6 +637,7 @@ data class SettlementForm(
 )
 
 class SettlementFormViewModel(container: AppContainer) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val orders = container.orderRepository
     private val finance = container.financeRepository
@@ -685,7 +688,7 @@ class SettlementFormViewModel(container: AppContainer) : ViewModel() {
             val result = runCatching {
                 orders.recordSettlement(
                     com.hisabnikash.app.data.repo.SettlementInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         courierId = f.courierId,
                         amountMinor = parseMoneyInput(f.cashText) ?: 0,
                         feeMinor = parseMoneyInput(f.feeText) ?: 0,
@@ -744,6 +747,7 @@ data class CourierForm(
 )
 
 class CourierFormViewModel(container: AppContainer, private val courierId: Long) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val db = container.database
     private val form = MutableStateFlow(CourierForm())
@@ -789,7 +793,7 @@ class CourierFormViewModel(container: AppContainer, private val courierId: Long)
             val result = runCatching {
                 val courier = CourierEntity(
                     id = f.courierId,
-                    businessId = f.businessId,
+                    businessId = workspace.requireActiveBusiness(),
                     name = f.name.trim(),
                     forwardFeeMinor = parseMoneyInput(f.forwardText) ?: 0,
                     returnFeeMinor = parseMoneyInput(f.returnText) ?: 0,
@@ -989,6 +993,7 @@ data class CampaignForm(
 )
 
 class CampaignFormViewModel(container: AppContainer) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val finance = container.financeRepository
     private val form = MutableStateFlow(CampaignForm())
@@ -1023,7 +1028,7 @@ class CampaignFormViewModel(container: AppContainer) : ViewModel() {
             val result = runCatching {
                 finance.saveCampaign(
                     CampaignEntity(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         platform = f.platform,
                         name = f.name.trim(),
                         spendMinor = parseMoneyInput(f.spendText) ?: 0,
@@ -1187,6 +1192,7 @@ private fun endOfMonth(): Long {
 }
 
 class BudgetFormViewModel(container: AppContainer) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val finance = container.financeRepository
     private val form = MutableStateFlow(BudgetForm())
@@ -1218,7 +1224,7 @@ class BudgetFormViewModel(container: AppContainer) : ViewModel() {
             val result = runCatching {
                 finance.saveBudget(
                     BudgetEntity(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         category = f.category,
                         periodStart = f.periodStart,
                         periodEnd = f.periodEnd,

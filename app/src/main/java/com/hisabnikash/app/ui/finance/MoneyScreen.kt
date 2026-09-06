@@ -224,6 +224,7 @@ data class AccountForm(
 )
 
 class AccountFormViewModel(container: AppContainer, private val accountId: Long) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val finance = container.financeRepository
     private val form = MutableStateFlow(AccountForm())
@@ -267,7 +268,7 @@ class AccountFormViewModel(container: AppContainer, private val accountId: Long)
                 finance.saveAccount(
                     AccountEntity(
                         id = f.accountId,
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         name = f.name.trim(),
                         type = f.type,
                         openingBalanceMinor = parseMoneyInput(f.openingText) ?: 0
@@ -595,6 +596,7 @@ data class TransferForm(
 )
 
 class TransferFormViewModel(container: AppContainer) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val finance = container.financeRepository
     private val form = MutableStateFlow(TransferForm())
@@ -647,7 +649,7 @@ class TransferFormViewModel(container: AppContainer) : ViewModel() {
             val result = runCatching {
                 finance.recordTransfer(
                     com.hisabnikash.app.data.repo.TransferInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         fromAccountId = f.fromId,
                         toAccountId = f.toId,
                         amountMinor = amount,
@@ -796,6 +798,7 @@ data class ExpenseForm(
 )
 
 class ExpenseFormViewModel(container: AppContainer) : ViewModel() {
+    private val workspace = container.workspaceRepository
 
     private val finance = container.financeRepository
     private val form = MutableStateFlow(ExpenseForm())
@@ -841,7 +844,7 @@ class ExpenseFormViewModel(container: AppContainer) : ViewModel() {
             val result = runCatching {
                 finance.createExpense(
                     com.hisabnikash.app.data.repo.ExpenseInput(
-                        businessId = f.businessId,
+                        businessId = workspace.requireActiveBusiness(),
                         category = f.category,
                         accountId = f.accountId,
                         amountMinor = amount,

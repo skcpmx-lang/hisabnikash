@@ -38,7 +38,7 @@ class AppContainer(context: Context) {
 
     val workspaceRepository: WorkspaceRepository = WorkspaceRepository(database, prefs)
     val catalogRepository: CatalogRepository = CatalogRepository(database, workspaceRepository)
-    val financeRepository: FinanceRepository = FinanceRepository(database)
+    val financeRepository: FinanceRepository = FinanceRepository(database, workspaceRepository)
     val orderRepository: OrderRepository = OrderRepository(database, workspaceRepository)
     val insightsRepository: InsightsRepository = InsightsRepository(database)
     val notificationRepository: NotificationRepository = NotificationRepository(database)

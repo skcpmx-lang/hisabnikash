@@ -8,7 +8,7 @@ import com.hisabnikash.app.data.db.BusinessSettingsEntity
 import com.hisabnikash.app.data.db.CourierEntity
 import com.hisabnikash.app.data.db.DocSequenceEntity
 import com.hisabnikash.app.data.db.SalesChannelEntity
-import com.hisabnikash.app.data.prefs.AppPreferences
+import com.hisabnikash.app.data.prefs.ActiveBusinessStore
 import com.hisabnikash.app.domain.model.Defaults
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -27,10 +27,11 @@ data class Workspace(
  */
 class WorkspaceRepository(
     private val db: AppDatabase,
-    private val prefs: AppPreferences
+    private val prefs: ActiveBusinessStore
 ) {
 
     private val workspaceDao = db.workspaceDao()
+    private val session = BusinessSession(prefs, workspaceDao)
 
     val businesses: Flow<List<BusinessEntity>> = workspaceDao.observeBusinesses()
 
@@ -143,8 +144,52 @@ class WorkspaceRepository(
     }
 
     suspend fun switchBusiness(id: Long) {
-        prefs.setActiveBusiness(id)
+        val business = workspaceDao.getBusiness(id)
+            ?: throw IllegalStateException("This business no longer exists. Choose another business.")
+        prefs.setActiveBusiness(business.id)
     }
+
+    /**
+     * Deletes a business and its cascade children, then repairs the session:
+     * the active id is moved to the most recent surviving business, or the
+     * session is cleared (and onboarding re-armed) when none remains.
+     */
+    suspend fun deleteBusiness(id: Long) {
+        db.withTransaction { workspaceDao.deleteBusiness(id) }
+        val active = prefs.activeBusinessId.first()
+        if (active == id) {
+            val latest = workspaceDao.latestBusiness()?.id
+            if (latest != null) {
+                prefs.setActiveBusiness(latest)
+            } else {
+                prefs.clearActiveBusiness()
+                prefs.setOnboardingDone(false)
+            }
+        }
+    }
+
+    /**
+     * Repository-level guard: refutes a write when the business row that a
+     * child row must reference does not exist. Never emits raw SQLite text.
+     */
+    suspend fun requireBusinessExists(businessId: Long) = session.requireExists(businessId)
+
+    /**
+     * The authoritative business id for every write operation.
+     *
+     * Resolves from the workspace session ONLY — never from a form's local
+     * state. If the session points at a missing/stale business, the workspace
+     * is healed to the most recent existing business; if none exists, writes
+     * are refused with a domain-level message (no orphan records, no fake ids).
+     */
+    suspend fun requireActiveBusiness(): Long = session.requireActive()
+
+    /**
+     * Startup recovery: validates the workspace session against the database
+     * and heals stale IDs. Returns null and clears the session when no
+     * business exists at all, so the app routes to business creation.
+     */
+    suspend fun recoverActiveBusiness(): Long? = session.recover()
 
     /**
      * Allocates a collision-safe sequential document number per business.

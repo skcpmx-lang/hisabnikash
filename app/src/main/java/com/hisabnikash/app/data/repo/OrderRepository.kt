@@ -187,6 +187,7 @@ class OrderRepository(private val db: AppDatabase, private val workspace: Worksp
     // ---------------------------------------------------------------- create
 
     suspend fun createOrder(input: NewOrderInput): Long = db.withTransaction {
+        requireOrderContext(input.businessId, input.customerId, input.channelId, input.courierId, input.lines.mapNotNull { it.productId })
         val subtotal = input.lines.sumOf { it.qty * it.unitPriceMinor - it.discountMinor }.coerceAtLeast(0)
         val total = (subtotal - input.discountMinor + input.deliveryChargeMinor).coerceAtLeast(0)
         val cod = if (input.paymentMethod == "COD") {
@@ -421,6 +422,23 @@ class OrderRepository(private val db: AppDatabase, private val workspace: Worksp
      * receipts can never double-count money.
      */
     suspend fun recordPayment(input: PaymentInput): ReceiptEntity = db.withTransaction {
+        workspace.requireBusinessExists(input.businessId)
+        input.customerId?.let { id ->
+            val customer = db.customerDao().getById(id)
+            if (customer != null && customer.businessId != input.businessId) {
+                throw IllegalStateException(
+                    "This payment's customer belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        input.accountId?.let { id ->
+            val account = db.accountDao().getById(id)
+            if (account != null && account.businessId != input.businessId) {
+                throw IllegalStateException(
+                    "This payment's account belongs to a different business. Switch business and try again."
+                )
+            }
+        }
         val receiptNo = workspace.nextDocNumber(input.businessId, "RECEIPT")
         val paymentId = db.paymentDao().insert(
             PaymentEntity(
@@ -1094,6 +1112,53 @@ class OrderRepository(private val db: AppDatabase, private val workspace: Worksp
     }
 
     private fun totalLabel(minor: Long): String = formatMoney(minor)
+
+    /**
+     * Cross-business guard for order creation: every referenced parent row
+     * must belong to the same business as the order itself.
+     */
+    private suspend fun requireOrderContext(
+        businessId: Long,
+        customerId: Long?,
+        channelId: Long?,
+        courierId: Long?,
+        productIds: List<Long>
+    ) {
+        workspace.requireBusinessExists(businessId)
+        customerId?.let { id ->
+            val customer = db.customerDao().getById(id)
+            if (customer != null && customer.businessId != businessId) {
+                throw IllegalStateException(
+                    "The selected customer belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        channelId?.let { id ->
+            val channels = db.channelDao().listAll(businessId)
+            if (channels.none { it.id == id }) {
+                throw IllegalStateException(
+                    "The selected sales channel no longer exists or belongs to a different business. Refresh and try again."
+                )
+            }
+        }
+        courierId?.let { id ->
+            val courier = db.courierDao().getById(id)
+            if (courier != null && courier.businessId != businessId) {
+                throw IllegalStateException(
+                    "The selected courier belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        productIds.forEach { id ->
+            val product = db.productDao().getById(id)
+            if (product != null && product.businessId != businessId) {
+                throw IllegalStateException(
+                    "A product on this order belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+    }
+
 }
 
 private fun formatMoney(minor: Long): String = com.hisabnikash.app.domain.model.formatMoney(minor)
