@@ -575,7 +575,7 @@ fun BackupScreenRoute(container: AppContainer, navController: NavHostController)
                     LabelValueRow("Exported", com.hisabnikash.app.domain.model.formatDateTime(info.exportedAt))
                     LabelValueRow("Records", "${info.rowCount}")
                     Text(
-                        "Restoring REPLACES the current business's data with the backup contents.",
+                        "Restoring REPLACES business #${info.businessId}'s data on this device with the backup contents. Other businesses are not touched.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Warning
                     )
