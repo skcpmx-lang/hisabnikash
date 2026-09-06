@@ -151,19 +151,19 @@ data class ReturnFormUi(
     val error: String? = null
 )
 
-class ReturnFormViewModel(container: AppContainer) : ViewModel() {
+class ReturnFormViewModel(container: AppContainer, initialOrderId: Long? = null) : ViewModel() {
 
     private val db = container.database
     private val finance = container.financeRepository
     private val orders = container.orderRepository
     private val form = MutableStateFlow(ReturnFormUi())
-    private val selectEvent = MutableStateFlow<Long?>(null)
+    private val selectEvent = MutableStateFlow(initialOrderId)
 
     val state: StateFlow<ReturnFormUi> = container.prefs.activeBusinessId
         .flatMapLatest { id ->
             if (id == null || id <= 0) flowOf(form.value)
             else db.orderDao().observeFiltered(id, "ALL", "").map { orders ->
-                val selectedId = selectEvent.value ?: form.value.selectedOrderId ?: orders.maxByOrNull { it.orderDate }?.id
+                val selectedId = selectEvent.value?.takeIf { id -> orders.any { it.id == id } } ?: form.value.selectedOrderId ?: orders.maxByOrNull { it.orderDate }?.id
                 form.value.copy(
                     businessId = id,
                     orders = orders.sortedByDescending { it.orderDate },
@@ -267,8 +267,8 @@ class ReturnFormViewModel(container: AppContainer) : ViewModel() {
 }
 
 @Composable
-fun ReturnFormRoute(container: AppContainer, navController: NavHostController) {
-    val vm = appViewModel(container) { ReturnFormViewModel(it) }
+fun ReturnFormRoute(container: AppContainer, navController: NavHostController, orderId: Long? = null) {
+    val vm = appViewModel(container, key = orderId?.let { "return-form-$it" }) { ReturnFormViewModel(it, orderId) }
     val state by vm.state.collectAsState()
 
     ScreenFrame("New return", onBack = { navController.popBackStack() }) {
@@ -392,13 +392,13 @@ data class ExchangeFormUi(
     val error: String? = null
 )
 
-class ExchangeFormViewModel(container: AppContainer) : ViewModel() {
+class ExchangeFormViewModel(container: AppContainer, initialOrderId: Long? = null) : ViewModel() {
 
     private val db = container.database
     private val orders = container.orderRepository
     private val catalog = container.catalogRepository
     private val form = MutableStateFlow(ExchangeFormUi())
-    private val selectEvent = MutableStateFlow<Long?>(null)
+    private val selectEvent = MutableStateFlow(initialOrderId)
 
     val state: StateFlow<ExchangeFormUi> = container.prefs.activeBusinessId
         .flatMapLatest { id ->
@@ -411,7 +411,7 @@ class ExchangeFormViewModel(container: AppContainer) : ViewModel() {
                     }
                 }
             ) { orders, products ->
-                val selectedId = selectEvent.value ?: form.value.selectedOrderId ?: orders.maxByOrNull { it.orderDate }?.id
+                val selectedId = selectEvent.value?.takeIf { id -> orders.any { it.id == id } } ?: form.value.selectedOrderId ?: orders.maxByOrNull { it.orderDate }?.id
                 form.value.copy(businessId = id, orders = orders.sortedByDescending { it.orderDate }, selectedOrderId = selectedId, products = products)
             }.flatMapLatest { f ->
                 val orderId = f.selectedOrderId
@@ -489,8 +489,8 @@ class ExchangeFormViewModel(container: AppContainer) : ViewModel() {
 }
 
 @Composable
-fun ExchangeFormRoute(container: AppContainer, navController: NavHostController) {
-    val vm = appViewModel(container) { ExchangeFormViewModel(it) }
+fun ExchangeFormRoute(container: AppContainer, navController: NavHostController, orderId: Long? = null) {
+    val vm = appViewModel(container, key = orderId?.let { "exchange-form-$it" }) { ExchangeFormViewModel(it, orderId) }
     val state by vm.state.collectAsState()
 
     ScreenFrame("New exchange", onBack = { navController.popBackStack() }) {
@@ -570,13 +570,13 @@ data class RefundFormUi(
     val error: String? = null
 )
 
-class RefundFormViewModel(container: AppContainer) : ViewModel() {
+class RefundFormViewModel(container: AppContainer, initialOrderId: Long? = null) : ViewModel() {
 
     private val db = container.database
     private val finance = container.financeRepository
     private val orders = container.orderRepository
     private val form = MutableStateFlow(RefundFormUi())
-    private val selectEvent = MutableStateFlow<Long?>(null)
+    private val selectEvent = MutableStateFlow(initialOrderId)
 
     val state: StateFlow<RefundFormUi> = container.prefs.activeBusinessId
         .flatMapLatest { id ->
@@ -585,7 +585,7 @@ class RefundFormViewModel(container: AppContainer) : ViewModel() {
                 db.orderDao().observeFiltered(id, "ALL", ""),
                 finance.observeAccounts(id).map { list -> list.map { DropOption("${it.id}", it.name) } }
             ) { orders, accounts ->
-                val selectedId = selectEvent.value ?: form.value.selectedOrderId ?: orders.maxByOrNull { it.orderDate }?.id
+                val selectedId = selectEvent.value?.takeIf { id -> orders.any { it.id == id } } ?: form.value.selectedOrderId ?: orders.maxByOrNull { it.orderDate }?.id
                 form.value.copy(
                     businessId = id,
                     orders = orders.sortedByDescending { it.orderDate },
@@ -640,8 +640,8 @@ class RefundFormViewModel(container: AppContainer) : ViewModel() {
 }
 
 @Composable
-fun RefundFormRoute(container: AppContainer, navController: NavHostController) {
-    val vm = appViewModel(container) { RefundFormViewModel(it) }
+fun RefundFormRoute(container: AppContainer, navController: NavHostController, orderId: Long? = null) {
+    val vm = appViewModel(container, key = orderId?.let { "refund-form-$it" }) { RefundFormViewModel(it, orderId) }
     val state by vm.state.collectAsState()
 
     ScreenFrame("New refund", onBack = { navController.popBackStack() }) {

@@ -122,18 +122,24 @@ object Routes {
 
     const val RETURN = "return/{id}"
     const val NEW_RETURN = "return/new"
+    const val RETURN_FOR_ORDER = "return/from-order/{orderId}"
     const val RETURNS = "returns"
     fun returnDetail(id: Long) = "return/$id"
+    fun returnForOrder(orderId: Long) = "return/from-order/$orderId"
 
     const val EXCHANGE = "exchange/{id}"
     const val NEW_EXCHANGE = "exchange/new"
+    const val EXCHANGE_FOR_ORDER = "exchange/from-order/{orderId}"
     const val EXCHANGES = "exchanges"
     fun exchange(id: Long) = "exchange/$id"
+    fun exchangeForOrder(orderId: Long) = "exchange/from-order/$orderId"
 
     const val REFUND = "refund/{id}"
     const val NEW_REFUND = "refund/new"
+    const val REFUND_FOR_ORDER = "refund/from-order/{orderId}"
     const val REFUNDS = "refunds"
     fun refund(id: Long) = "refund/$id"
+    fun refundForOrder(orderId: Long) = "refund/from-order/$orderId"
 
     const val RECEIPTS = "receipts"
     const val SETTLEMENT = "settlement/new"
@@ -343,17 +349,35 @@ fun HisabNavGraph(container: AppContainer) {
         composable(Routes.NEW_RETURN) {
             ReturnFormRoute(container, navController)
         }
+        composable(
+            Routes.RETURN_FOR_ORDER,
+            arguments = listOf(navArgument("orderId") { type = NavType.LongType })
+        ) { entry ->
+            ReturnFormRoute(container, navController, entry.arguments?.getLong("orderId"))
+        }
         composable(Routes.RETURNS) {
             ReturnsListRoute(container, navController)
         }
         composable(Routes.NEW_EXCHANGE) {
             ExchangeFormRoute(container, navController)
         }
+        composable(
+            Routes.EXCHANGE_FOR_ORDER,
+            arguments = listOf(navArgument("orderId") { type = NavType.LongType })
+        ) { entry ->
+            ExchangeFormRoute(container, navController, entry.arguments?.getLong("orderId"))
+        }
         composable(Routes.EXCHANGES) {
             ExchangesListRoute(container, navController)
         }
         composable(Routes.NEW_REFUND) {
             RefundFormRoute(container, navController)
+        }
+        composable(
+            Routes.REFUND_FOR_ORDER,
+            arguments = listOf(navArgument("orderId") { type = NavType.LongType })
+        ) { entry ->
+            RefundFormRoute(container, navController, entry.arguments?.getLong("orderId"))
         }
         composable(Routes.REFUNDS) {
             RefundsListRoute(container, navController)
