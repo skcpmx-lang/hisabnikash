@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Search
@@ -443,7 +446,7 @@ fun CustomerDetailRoute(container: AppContainer, navController: NavHostControlle
         }
         SectionHeader("Orders")
         if (state.orders.isEmpty()) {
-            Text("No orders yet.", color = InkFaint, modifier = Modifier.padding(horizontal = 16.dp))
+            EmptyState(Icons.Filled.Article, "No orders yet", "Orders for this customer appear here with their totals.")
         } else {
             state.orders.take(15).forEach { order ->
                 ElevatedCard(
@@ -472,7 +475,7 @@ fun CustomerDetailRoute(container: AppContainer, navController: NavHostControlle
         }
         SectionHeader("Receivables")
         if (state.receivables.isEmpty()) {
-            Text("Nothing outstanding.", color = InkFaint, modifier = Modifier.padding(horizontal = 16.dp))
+            EmptyState(Icons.Filled.Payments, "Nothing outstanding", "All dues are cleared — no COD or receivable is open for this customer.")
         } else {
             state.receivables.forEach { r ->
                 statusRow(
@@ -484,7 +487,7 @@ fun CustomerDetailRoute(container: AppContainer, navController: NavHostControlle
         }
         SectionHeader("Payments")
         if (state.payments.isEmpty()) {
-            Text("No payments recorded.", color = InkFaint, modifier = Modifier.padding(horizontal = 16.dp))
+            EmptyState(Icons.Filled.ReceiptLong, "No payments recorded", "Payments received from this customer appear here.")
         } else {
             state.payments.forEach { p ->
                 statusRow(

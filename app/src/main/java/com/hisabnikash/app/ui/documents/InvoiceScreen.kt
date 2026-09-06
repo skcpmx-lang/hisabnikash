@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Delete
@@ -565,7 +566,7 @@ fun InvoiceDetailRoute(container: AppContainer, navController: NavHostController
         }
         SectionHeader("Receipts")
         if (state.receipts.isEmpty()) {
-            Text("No receipts yet.", color = InkFaint, modifier = Modifier.padding(horizontal = 16.dp))
+            EmptyState(Icons.Filled.ReceiptLong, "No receipts yet", "Proofs for every payment appear here once generated.")
         } else {
             state.receipts.forEach { receipt ->
                 ElevatedCard(

@@ -892,7 +892,7 @@ private fun BusinessHealthCard(health: HealthVerdict?) {
                 )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    HealthGauge(score = health.score, size = 120.dp)
+                    HealthGauge(score = health.score, gaugeSize = 120.dp)
                     Spacer(Modifier.width(Spacing.Xl))
                     Column(Modifier.weight(1f)) {
                         Text(health.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
