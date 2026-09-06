@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher foreground: the supplied HisabNikash artwork, used exactly as
+    provided. The 8dp inset places the artwork inside the adaptive-icon
+    safe zone (centre 66dp of the 108dp canvas) so round/squircle masks
+    never clip the arrows. The bitmap itself is untouched.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/app_logo"
+    android:inset="8dp" />

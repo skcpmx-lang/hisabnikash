@@ -1,0 +1,376 @@
+package com.hisabnikash.app.data.repo
+
+import com.hisabnikash.app.data.db.AppDatabase
+import com.hisabnikash.app.data.db.OrderEntity
+import com.hisabnikash.app.domain.model.CommerceMath
+import com.hisabnikash.app.domain.model.OrderStatus
+import kotlinx.coroutines.flow.Flow
+import java.util.Calendar
+
+data class Period(val fromAt: Long, val toAt: Long)
+
+object PeriodControl {
+    const val DAY_MS = 86_400_000L
+
+    fun resolve(preset: String, now: Long = System.currentTimeMillis()): Period {
+        val startOfToday = startOfDay(now)
+        return when (preset) {
+            "1D" -> Period(startOfToday, now)
+            "7D" -> Period(startOfToday - 6 * DAY_MS, now)
+            "10D" -> Period(startOfToday - 9 * DAY_MS, now)
+            "30D" -> Period(startOfToday - 29 * DAY_MS, now)
+            "90D" -> Period(startOfToday - 89 * DAY_MS, now)
+            "1Y" -> Period(startOfToday - 364 * DAY_MS, now)
+            else -> Period(startOfToday, now)
+        }
+    }
+
+    fun previous(preset: String, now: Long = System.currentTimeMillis()): Period {
+        val current = resolve(preset, now)
+        val span = current.toAt - current.fromAt
+        val gap = if (preset == "1D") DAY_MS else 0L
+        return Period(current.fromAt - span - gap, current.fromAt - gap)
+    }
+
+    private fun startOfDay(now: Long): Long {
+        val cal = Calendar.getInstance().apply { timeInMillis = now }
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+}
+
+data class MetricsBundle(
+    val revenueMinor: Long = 0,
+    val netProfitMinor: Long = 0,
+    val cogsMinor: Long = 0,
+    val couponDeliveryMinor: Long = 0,
+    val courierMinor: Long = 0,
+    val packagingMinor: Long = 0,
+    val advertisingMinor: Long = 0,
+    val otherCostsMinor: Long = 0,
+    val refundsMinor: Long = 0,
+    val expensesMinor: Long = 0,
+    val orderCount: Long = 0,
+    val deliveredCount: Long = 0,
+    val returnedCount: Long = 0,
+    val cancelledCount: Long = 0,
+    val unitsSold: Long = 0,
+    val codPendingMinor: Long = 0,
+    val availableCashMinor: Long = 0,
+    val receivablesMinor: Long = 0,
+    val payablesMinor: Long = 0,
+    val cashInMinor: Long = 0,
+    val cashOutMinor: Long = 0,
+    val transferInMinor: Long = 0,
+    val transferOutMinor: Long = 0,
+    val aovMinor: Long = 0,
+    val marginBps: Int = 0,
+    val returnRateBps: Int = 0,
+    val roasBps: Int = 0,
+    val adSpendMinor: Long = 0,
+    val adRevenueMinor: Long = 0
+)
+
+/**
+ * Central aggregation engine. Every screen (dashboard, analytics, reports,
+ * profit explorer, cash flow) reads its numbers through this single path so
+ * figures always agree.
+ */
+class InsightsRepository(private val db: AppDatabase) {
+
+    fun observeOrderCounts(businessId: Long) = db.orderDao().observeCountsByStatus(businessId)
+
+    fun observeDeliveredOrders(businessId: Long, fromAt: Long, toAt: Long) =
+        db.orderDao().observeDeliveredInRange(businessId, fromAt, toAt)
+
+    fun observeDelivered(businessId: Long) = db.orderDao().observeDeliveredInRange(
+        businessId, 0, Long.MAX_VALUE
+    )
+
+    /**
+     * Reactive metrics: re-computes automatically whenever any contributing
+     * table changes, so dashboards never show stale aggregates.
+     */
+    fun observeMetrics(businessId: Long, fromAt: Long, toAt: Long): Flow<MetricsBundle> {
+        val a = kotlinx.coroutines.flow.combine(
+            db.orderDao().observeAllInRange(businessId, fromAt, toAt),
+            db.refundDao().observeInRange(businessId, fromAt, toAt),
+            db.expenseDao().observeInRange(businessId, fromAt, toAt),
+            db.ledgerDao().observeInRange(businessId, fromAt, toAt),
+            db.receivablePayableDao().observeCodReceivables(businessId)
+        ) { orders, refunds, expenses, ledger, codOpen ->
+            val delivered = orders.filter { it.status == OrderStatus.DELIVERED.name }
+            val revenue = delivered.sumOf { CommerceMath.orderRevenue(it) } - refunds.sumOf { it.amountMinor }
+            val orderCosts = delivered.sumOf { CommerceMath.orderCosts(it) }
+            val cashIn = ledger.filter { it.direction == "IN" && it.category != "TRANSFER" }.sumOf { it.amountMinor }
+            val cashOut = ledger.filter { it.direction == "OUT" && it.category != "TRANSFER" }.sumOf { it.amountMinor }
+            val transfers = ledger.filter { it.category == "TRANSFER" }
+            RawSlice(
+                orders, refunds, expenses, ledger, codOpen, delivered, revenue, orderCosts,
+                cashIn, cashOut, transfers
+            )
+        }
+        val b = kotlinx.coroutines.flow.combine(
+            db.orderDao().observeCogsInRange(businessId, fromAt, toAt),
+            db.orderDao().observeUnitsInRange(businessId, fromAt, toAt),
+            db.accountDao().observeTotalBalance(businessId),
+            db.receivablePayableDao().observePayablesOutstanding(businessId),
+            db.campaignDao().observeInRange(businessId, fromAt, toAt)
+        ) { cogs, units, cash, payables, campaigns ->
+            ExtraSlice(cogs, units, cash, payables, campaigns)
+        }
+        return kotlinx.coroutines.flow.combine(a, b) { raw, extra ->
+            val delivered = raw.delivered
+            val profit = raw.revenue - extra.cogs - raw.orderCosts - raw.refunds.sumOf { it.amountMinor }
+            MetricsBundle(
+                revenueMinor = raw.revenue.coerceAtLeast(0),
+                netProfitMinor = profit,
+                cogsMinor = extra.cogs,
+                courierMinor = delivered.sumOf { it.courierFeeMinor + it.returnCourierFeeMinor },
+                packagingMinor = delivered.sumOf { it.packagingMinor },
+                advertisingMinor = delivered.sumOf { it.advertisingMinor },
+                otherCostsMinor = delivered.sumOf { it.otherCostMinor },
+                refundsMinor = raw.refunds.sumOf { it.amountMinor },
+                expensesMinor = raw.expenses.sumOf { it.amountMinor },
+                orderCount = raw.orders.size.toLong(),
+                deliveredCount = delivered.size.toLong(),
+                returnedCount = raw.orders.count { it.status == "RETURNED" }.toLong(),
+                cancelledCount = raw.orders.count { it.status == "CANCELLED" }.toLong(),
+                unitsSold = extra.units,
+                codPendingMinor = raw.codOpen.sumOf { (it.amountMinor - it.paidMinor).coerceAtLeast(0) },
+                availableCashMinor = extra.cash,
+                receivablesMinor = raw.codOpen.sumOf { (it.amountMinor - it.paidMinor).coerceAtLeast(0) },
+                payablesMinor = extra.payables,
+                cashInMinor = raw.cashIn,
+                cashOutMinor = raw.cashOut,
+                transferInMinor = raw.transfers.filter { it.direction == "IN" }.sumOf { it.amountMinor },
+                transferOutMinor = raw.transfers.filter { it.direction == "OUT" }.sumOf { it.amountMinor },
+                aovMinor = if (delivered.isEmpty()) 0 else raw.revenue / delivered.size,
+                marginBps = CommerceMath.marginPercentBps(profit, raw.revenue),
+                returnRateBps = CommerceMath.returnRate(
+                    delivered.count { it.status == "RETURNED" }.toLong(),
+                    delivered.size.toLong()
+                ),
+                roasBps = CommerceMath.roas(
+                    extra.campaigns.sumOf { it.attributedRevenueMinor },
+                    extra.campaigns.sumOf { it.spendMinor }
+                ),
+                adSpendMinor = extra.campaigns.sumOf { it.spendMinor },
+                adRevenueMinor = extra.campaigns.sumOf { it.attributedRevenueMinor }
+            )
+        }
+    }
+
+    private data class RawSlice(
+        val orders: List<com.hisabnikash.app.data.db.OrderEntity>,
+        val refunds: List<com.hisabnikash.app.data.db.RefundDocumentEntity>,
+        val expenses: List<com.hisabnikash.app.data.db.ExpenseEntity>,
+        val ledger: List<com.hisabnikash.app.data.db.AccountTransactionEntity>,
+        val codOpen: List<com.hisabnikash.app.data.db.ReceivableEntity>,
+        val delivered: List<com.hisabnikash.app.data.db.OrderEntity>,
+        val revenue: Long,
+        val orderCosts: Long,
+        val cashIn: Long,
+        val cashOut: Long,
+        val transfers: List<com.hisabnikash.app.data.db.AccountTransactionEntity>
+    )
+
+    private data class ExtraSlice(
+        val cogs: Long,
+        val units: Long,
+        val cash: Long,
+        val payables: Long,
+        val campaigns: List<com.hisabnikash.app.data.db.CampaignEntity>
+    )
+
+    suspend fun metrics(businessId: Long, fromAt: Long, toAt: Long): MetricsBundle {
+        val orders = db.orderDao().allInRange(businessId, fromAt, toAt)
+        val delivered = orders.filter { it.status == OrderStatus.DELIVERED.name }
+        val refunds = db.refundDao().inRange(businessId, fromAt, toAt)
+        val expenses = db.expenseDao().inRange(businessId, fromAt, toAt)
+        val ledger = db.ledgerDao().inRange(businessId, fromAt, toAt)
+        val cogs = db.orderDao().cogsInRange(businessId, fromAt, toAt)
+        val units = db.orderDao().unitsInRange(businessId, fromAt, toAt)
+        val codOpen = db.receivablePayableDao().openCodReceivables(businessId)
+
+        val revenue = delivered.sumOf { CommerceMath.orderRevenue(it) } - refunds.sumOf { it.amountMinor }
+        val orderCosts = delivered.sumOf { CommerceMath.orderCosts(it) }
+        val profit = revenue - cogs - orderCosts - refunds.sumOf { it.amountMinor }
+
+        val courier = delivered.sumOf { it.courierFeeMinor + it.returnCourierFeeMinor }
+        val packaging = delivered.sumOf { it.packagingMinor }
+        val advertising = delivered.sumOf { it.advertisingMinor }
+        val other = delivered.sumOf { it.otherCostMinor }
+
+        val cashIn = ledger.filter { it.direction == "IN" && it.category != "TRANSFER" }.sumOf { it.amountMinor }
+        val cashOut = ledger.filter { it.direction == "OUT" && it.category != "TRANSFER" }.sumOf { it.amountMinor }
+        val transfers = ledger.filter { it.category == "TRANSFER" }
+        val transferIn = transfers.filter { it.direction == "IN" }.sumOf { it.amountMinor }
+        val transferOut = transfers.filter { it.direction == "OUT" }.sumOf { it.amountMinor }
+
+        val opening = db.accountDao().totalOpening(businessId)
+        val netAllTime = db.ledgerDao().netAllTime(businessId)
+        val codPending = codOpen.sumOf { (it.amountMinor - it.paidMinor).coerceAtLeast(0) }
+
+        val campaigns = db.campaignDao().allInRange(businessId, fromAt, toAt)
+
+        val aov = if (delivered.isEmpty()) 0 else revenue / delivered.size
+        val margin = CommerceMath.marginPercentBps(profit, revenue)
+        val returnRate = CommerceMath.returnRate(
+            orders.count { it.status == "RETURNED" }.toLong(),
+            delivered.size.toLong()
+        )
+        val adSpend = campaigns.sumOf { it.spendMinor }
+        val roas = CommerceMath.roas(campaigns.sumOf { it.attributedRevenueMinor }, adSpend)
+
+        return MetricsBundle(
+            revenueMinor = revenue.coerceAtLeast(0),
+            netProfitMinor = profit,
+            cogsMinor = cogs,
+            courierMinor = courier,
+            packagingMinor = packaging,
+            advertisingMinor = advertising,
+            otherCostsMinor = other,
+            refundsMinor = refunds.sumOf { it.amountMinor },
+            expensesMinor = expenses.sumOf { it.amountMinor },
+            orderCount = orders.size.toLong(),
+            deliveredCount = delivered.size.toLong(),
+            returnedCount = orders.count { it.status == "RETURNED" }.toLong(),
+            cancelledCount = orders.count { it.status == "CANCELLED" }.toLong(),
+            unitsSold = units,
+            codPendingMinor = codPending,
+            availableCashMinor = opening + netAllTime,
+            receivablesMinor = codPending,
+            payablesMinor = db.receivablePayableDao().outstandingPayablesMinor(businessId),
+            cashInMinor = cashIn,
+            cashOutMinor = cashOut,
+            transferInMinor = transferIn,
+            transferOutMinor = transferOut,
+            aovMinor = aov,
+            marginBps = margin,
+            returnRateBps = returnRate,
+            roasBps = roas,
+            adSpendMinor = adSpend,
+            adRevenueMinor = campaigns.sumOf { it.attributedRevenueMinor }
+        )
+    }
+
+    /** Same bundle with un-recognised orders excluded (orders not yet delivered). */
+    suspend fun deliveredOrderCount(businessId: Long, fromAt: Long, toAt: Long): Long =
+        db.orderDao().countWithStatusInRange(businessId, "DELIVERED", fromAt, toAt)
+
+    suspend fun byChannel(businessId: Long, fromAt: Long, toAt: Long) =
+        db.orderDao().byChannel(businessId, fromAt, toAt)
+
+    suspend fun productSales(businessId: Long, fromAt: Long, toAt: Long) =
+        db.orderDao().productSalesInRange(businessId, fromAt, toAt)
+
+    suspend fun expensesByCategory(businessId: Long, fromAt: Long, toAt: Long) =
+        db.expenseDao().inRange(businessId, fromAt, toAt).groupBy { it.category }
+            .map { (category, list) -> category to list.sumOf { it.amountMinor } }
+            .sortedByDescending { it.second }
+
+    suspend fun dailySeries(businessId: Long, fromAt: Long, toAt: Long): List<DailyPoint> {
+        val delivered = db.orderDao().allInRange(businessId, fromAt, toAt)
+            .filter { it.status == OrderStatus.DELIVERED.name }
+        val refunds = db.refundDao().inRange(businessId, fromAt, toAt)
+        val dayMs = PeriodControl.DAY_MS
+        val startDay = fromAt - (fromAt % dayMs)
+        val map = LinkedHashMap<Long, MutableLongs>()
+        var day = startDay
+        while (day <= toAt) {
+            map[day] = MutableLongs()
+            day += dayMs
+        }
+        delivered.forEach { o ->
+            val bucket = o.orderDate - (o.orderDate % dayMs)
+            map[bucket]?.apply { this.revenue += CommerceMath.orderRevenue(o) }
+        }
+        refunds.forEach { r ->
+            val bucket = r.dateAt - (r.dateAt % dayMs)
+            map[bucket]?.apply { this.refunds += r.amountMinor }
+        }
+        return map.map { (time, v) ->
+            DailyPoint(
+                time = time,
+                revenueMinor = v.revenue - v.refunds,
+                ordersCount = 0
+            )
+        }
+    }
+
+    /**
+     * Aggregated presentation series over the real daily data. Nothing is
+     * invented or dropped: every delivered order/refund in range is included,
+     * simply rolled into weekly or monthly buckets so long periods stay
+     * readable while remaining complete.
+     */
+    suspend fun chartSeries(businessId: Long, fromAt: Long, toAt: Long, mode: String): List<DailyPoint> {
+        val daily = dailySeries(businessId, fromAt, toAt)
+        return when (mode) {
+            "WEEKLY" -> {
+                val weekMs = 7 * PeriodControl.DAY_MS
+                val map = LinkedHashMap<Long, MutableLongs>()
+                daily.forEach { point ->
+                    val bucket = point.time - (point.time % weekMs)
+                    val slot = map.getOrPut(bucket) { MutableLongs() }
+                    slot.revenue += point.revenueMinor
+                }
+                map.map { (time, v) -> DailyPoint(time = time, revenueMinor = v.revenue, ordersCount = 0) }
+            }
+            "MONTHLY" -> {
+                val cal = java.util.Calendar.getInstance()
+                val map = LinkedHashMap<Long, MutableLongs>()
+                daily.forEach { point ->
+                    cal.timeInMillis = point.time
+                    cal.set(java.util.Calendar.DAY_OF_MONTH, 1)
+                    cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    cal.set(java.util.Calendar.MINUTE, 0)
+                    cal.set(java.util.Calendar.SECOND, 0)
+                    cal.set(java.util.Calendar.MILLISECOND, 0)
+                    val bucket = cal.timeInMillis
+                    val slot = map.getOrPut(bucket) { MutableLongs() }
+                    slot.revenue += point.revenueMinor
+                }
+                map.map { (time, v) -> DailyPoint(time = time, revenueMinor = v.revenue, ordersCount = 0) }
+            }
+            else -> daily
+        }
+    }
+
+    suspend fun intradayBuckets(businessId: Long, fromAt: Long, toAt: Long): List<DailyPoint> {
+        val delivered = db.orderDao().allInRange(businessId, fromAt, toAt)
+            .filter { it.status == OrderStatus.DELIVERED.name }
+        val buckets = LinkedHashMap<Int, MutableLongs>()
+        for (hour in 0..23) buckets[hour] = MutableLongs()
+        delivered.forEach { o ->
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = o.orderDate }
+            val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+            buckets[hour]?.apply { this.revenue += CommerceMath.orderRevenue(o); this.orders += 1 }
+        }
+        return buckets.map { (hour, v) ->
+            DailyPoint(
+                time = hour * 86_400_000L,
+                revenueMinor = v.revenue,
+                ordersCount = v.orders
+            )
+        }
+    }
+
+    private class MutableLongs {
+        var revenue: Long = 0
+        var refunds: Long = 0
+        var orders: Long = 0
+    }
+}
+
+data class DailyPoint(
+    val time: Long,
+    val revenueMinor: Long,
+    val ordersCount: Long
+) {
+    val hour: Int get() = (time / 86_400_000L).toInt()
+}
