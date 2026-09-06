@@ -1,6 +1,7 @@
 package com.hisabnikash.app.ui.products
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -336,7 +338,7 @@ data class ProductForm(
     val error: String? = null
 )
 
-class ProductFormViewModel(container: AppContainer, private val productId: Long) : ViewModel() {
+class ProductFormViewModel(private val container: AppContainer, private val productId: Long) : ViewModel() {
 
     private val catalog = container.catalogRepository
     private val form = MutableStateFlow(ProductForm())
@@ -705,7 +707,7 @@ private fun ProductImageSection(
                     OutlinedButton(
                         onClick = {
                             gallery.launch(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
                         },
                         modifier = Modifier.weight(1f)
@@ -758,7 +760,7 @@ private fun ProductImageSection(
                     OutlinedButton(
                         onClick = {
                             gallery.launch(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
                         },
                         modifier = Modifier.weight(1f)

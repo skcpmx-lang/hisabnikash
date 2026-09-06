@@ -1,6 +1,7 @@
 package com.hisabnikash.app.ui.home
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,6 +72,7 @@ import com.hisabnikash.app.ui.components.LinkRow
 import com.hisabnikash.app.ui.components.MetricCard
 import com.hisabnikash.app.ui.components.QuickActionTile
 import com.hisabnikash.app.ui.components.SectionHeader
+import com.hisabnikash.app.ui.components.orderStatusColor
 import com.hisabnikash.app.ui.components.SkeletonCard
 import com.hisabnikash.app.ui.nav.Routes
 import com.hisabnikash.app.ui.theme.BrandGold
