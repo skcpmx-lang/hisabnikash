@@ -394,7 +394,8 @@ class ProductFormViewModel(private val container: AppContainer, private val prod
     fun setCost(v: Long) = { form.value = form.value.copy(costText = com.hisabnikash.app.domain.model.formatMoneyPlain(v)) }()
     fun setStock(v: String) = { form.value = form.value.copy(stockText = v.filter(Char::isDigit)) }()
     fun setThreshold(v: String) = { form.value = form.value.copy(thresholdText = v.filter(Char::isDigit)) }()
-    fun setSupplier(v: Long?) = { form.value = form.value.copy(supplierId = v) }()
+    fun setSupplier(v: Long?) =
+        { form.value = form.value.copy(supplierId = com.hisabnikash.app.domain.model.ProductSaveRules.normalizeSupplierId(v)) }()
     fun setDescription(v: String) = { form.value = form.value.copy(description = v) }()
     fun setNotes(v: String) = { form.value = form.value.copy(notes = v) }()
     fun setStatus(v: String) = { form.value = form.value.copy(status = v) }()
@@ -463,7 +464,7 @@ class ProductFormViewModel(private val container: AppContainer, private val prod
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess(onSaved).onFailure { e ->
-                    form.value = f.copy(saving = false, error = "Couldn't save product: ${e.message}")
+                    form.value = f.copy(saving = false, error = FriendlyErrors.productSave(e))
                 }
             }
         }
@@ -539,9 +540,11 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
         TonalCard {
             AppDropdown(
                 "Default supplier",
-                state.suppliers,
-                state.supplierId?.toString(),
-                { vm.setSupplier(it.id.toLong()) },
+                listOf(DropOption("", "Not linked", "No supplier is assigned")) + state.suppliers,
+                state.supplierId?.toString() ?: "",
+                { option ->
+                    vm.setSupplier(if (option.id.isBlank()) null else option.id.toLong())
+                },
                 placeholder = "Not linked",
                 emptyTitle = "No suppliers yet",
                 emptyHint = "Link a supplier later from Purchases.",
@@ -622,6 +625,22 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
             enabled = !state.saving,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
         ) { Text(if (state.saving) "Saving…" else "Save product") }
+    }
+}
+
+/** Maps database failures to human-readable messages. Raw SQLite/constraint text
+ * is never shown to the user; the underlying cause is fixed at the write path. */
+private object FriendlyErrors {
+    fun productSave(e: Throwable): String {
+        val msg = e.message.orEmpty()
+        if (e is IllegalStateException) return msg
+        if (e is IllegalArgumentException) return msg
+        if (msg.contains("FOREIGN KEY", ignoreCase = true) ||
+            msg.contains("SQLITE_CONSTRAINT", ignoreCase = true)
+        ) {
+            return "This product could not be saved because one of its references no longer exists. Refresh and try again."
+        }
+        return "This product could not be saved. Please check the details and try again."
     }
 }
 

@@ -40,6 +40,7 @@ import androidx.navigation.NavHostController
 import com.hisabnikash.app.data.container.AppContainer
 import com.hisabnikash.app.data.db.SupplierEntity
 import com.hisabnikash.app.domain.model.formatDateTime
+import com.hisabnikash.app.domain.model.FormInputSync
 import com.hisabnikash.app.domain.model.formatMoney
 import com.hisabnikash.app.domain.model.parseMoneyInput
 import com.hisabnikash.app.ui.components.AppDropdown
@@ -178,6 +179,14 @@ fun SuppliersScreenRoute(container: AppContainer, navController: NavHostControll
 // Supplier form
 // ---------------------------------------------------------------------------
 
+private data class SupplierFields(
+    val name: String,
+    val phone: String,
+    val email: String,
+    val address: String,
+    val notes: String
+)
+
 data class SupplierForm(
     val businessId: Long = 0,
     val supplierId: Long = 0,
@@ -199,20 +208,36 @@ class SupplierFormViewModel(container: AppContainer, private val supplierId: Lon
     val state: StateFlow<SupplierForm> = container.prefs.activeBusinessId
         .flatMapLatest { id ->
             if (id == null || id <= 0) flowOf(form.value)
-            else if (supplierId > 0 && !form.value.loaded) {
-                catalog.observeSupplier(supplierId).map { supplier ->
-                    form.value.copy(
-                        businessId = id,
-                        supplierId = supplierId,
-                        loaded = true,
-                        name = supplier?.name ?: "",
-                        phone = supplier?.phone ?: "",
-                        email = supplier?.email ?: "",
-                        address = supplier?.address ?: "",
-                        notes = supplier?.notes ?: ""
-                    )
-                }
-            } else flowOf(form.value.copy(businessId = id))
+            else
+                // Same fix as the customer form: the form value is combined so
+                // every keystroke re-emits (the old one-shot flowOf held the
+                // initial empty value and typed text never appeared).
+                combine(form, flowOf(id)) { f, businessId -> f.copy(businessId = businessId) }
+                    .flatMapLatest { f ->
+                        if (supplierId > 0 && !f.loaded) {
+                            catalog.observeSupplier(supplierId).map { supplier ->
+                                val (loaded, fields) = FormInputSync.mergeLoaded(
+                                    f.loaded,
+                                    SupplierFields(f.name, f.phone, f.email, f.address, f.notes),
+                                    supplier?.let {
+                                        SupplierFields(it.name, it.phone.orEmpty(), it.email.orEmpty(), it.address.orEmpty(), it.notes.orEmpty())
+                                    },
+                                    f.name.isBlank() && f.phone.isBlank() &&
+                                    f.email.isBlank() && f.address.isBlank() && f.notes.isBlank(),
+                                )
+                                f.copy(
+                                    businessId = id,
+                                    supplierId = supplierId,
+                                    loaded = loaded,
+                                    name = fields.name,
+                                    phone = fields.phone,
+                                    email = fields.email,
+                                    address = fields.address,
+                                    notes = fields.notes
+                                )
+                            }
+                        } else flowOf(f)
+                    }
         }
         .stateIn(
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default),
@@ -249,7 +274,17 @@ class SupplierFormViewModel(container: AppContainer, private val supplierId: Lon
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess(onSaved).onFailure { e ->
-                    form.value = f.copy(saving = false, error = "Couldn't save supplier: ${e.message}")
+                    val msg = e.message.orEmpty()
+                    form.value = f.copy(
+                        saving = false,
+                        error = if (msg.contains("FOREIGN KEY", ignoreCase = true) ||
+                            msg.contains("SQLITE_CONSTRAINT", ignoreCase = true)
+                        ) {
+                            "This supplier could not be saved because one of its references no longer exists. Refresh and try again."
+                        } else {
+                            "This supplier could not be saved. Please check the details and try again."
+                        }
+                    )
                 }
             }
         }

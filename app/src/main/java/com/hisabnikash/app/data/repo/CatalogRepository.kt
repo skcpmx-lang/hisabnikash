@@ -10,6 +10,8 @@ import com.hisabnikash.app.data.db.ProductVariantEntity
 import com.hisabnikash.app.data.db.PurchaseEntity
 import com.hisabnikash.app.data.db.PurchaseItemEntity
 import com.hisabnikash.app.data.db.SupplierEntity
+import com.hisabnikash.app.domain.model.ProductSaveRules
+import com.hisabnikash.app.domain.model.SupplierReference
 import kotlinx.coroutines.flow.Flow
 import java.io.File
 
@@ -70,11 +72,33 @@ class CatalogRepository(private val db: AppDatabase, private val workspace: Work
 
     suspend fun saveProduct(product: ProductEntity, variants: List<ProductVariantEntity>): Long =
         db.withTransaction {
-            val id = if (product.id == 0L) db.productDao().insert(product)
+            // The product must belong to a real business. This is the FK that
+            // produced "code 787" when a zero/stale businessId was persisted.
+            require(product.businessId > 0) { "Select a business before saving a product." }
+            db.workspaceDao().getBusiness(product.businessId)
+                ?: throw IllegalStateException(
+                    "The business for this product no longer exists. Switch business and try again."
+                )
+
+            // Supplier relationship: NULL for "Not linked", never a placeholder
+            // id, and always inside the current business.
+            val validatedSupplier = ProductSaveRules.validateSupplier(
+                product.supplierId,
+                product.businessId,
+                product.supplierId?.let { id ->
+                    db.supplierDao().getById(id)?.let { SupplierReference(it.id, it.businessId) }
+                }
+            )
+            val safe = product.copy(supplierId = validatedSupplier)
+
+            val isNew = safe.id == 0L
+            val id = if (isNew) db.productDao().insert(safe)
             else {
-                db.productDao().update(product.copy(updatedAt = System.currentTimeMillis()))
-                product.id
+                db.productDao().update(safe.copy(updatedAt = System.currentTimeMillis()))
+                safe.id
             }
+
+            // Children are keyed to the ACTUAL persisted product id.
             db.variantDao().deleteForProduct(id)
             if (variants.isNotEmpty()) {
                 db.variantDao().insertAll(
@@ -83,7 +107,25 @@ class CatalogRepository(private val db: AppDatabase, private val workspace: Work
                     }
                 )
             }
-            audit(product.businessId, "PRODUCT", id, if (product.id == 0L) "CREATE" else "UPDATE", product.name)
+
+            // Opening stock creates a real inventory movement (CASE: stock > 0),
+            // inside the same transaction as the product itself.
+            if (isNew && safe.stockQty > 0) {
+                db.inventoryDao().insert(
+                    InventoryMovementEntity(
+                        businessId = product.businessId,
+                        productId = id,
+                        type = "OPENING",
+                        qty = safe.stockQty,
+                        dateAt = System.currentTimeMillis(),
+                        reason = "Opening stock",
+                        notes = "Set when the product was created.",
+                        balanceAfter = safe.stockQty
+                    )
+                )
+            }
+
+            audit(product.businessId, "PRODUCT", id, if (isNew) "CREATE" else "UPDATE", product.name)
             id
         }
 

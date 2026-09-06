@@ -47,6 +47,7 @@ import com.hisabnikash.app.data.container.AppContainer
 import com.hisabnikash.app.data.db.CustomerAggregate
 import com.hisabnikash.app.data.db.CustomerEntity
 import com.hisabnikash.app.domain.model.formatDateTime
+import com.hisabnikash.app.domain.model.FormInputSync
 import com.hisabnikash.app.domain.model.formatMoney
 import com.hisabnikash.app.domain.model.CommerceMath
 import com.hisabnikash.app.ui.components.AppTextField
@@ -228,6 +229,15 @@ private val ErrorColor = com.hisabnikash.app.ui.theme.Error
 // Customer form
 // ---------------------------------------------------------------------------
 
+private data class CustomerFields(
+    val name: String,
+    val phone: String,
+    val email: String,
+    val address: String,
+    val tags: String,
+    val notes: String
+)
+
 data class CustomerForm(
     val businessId: Long = 0,
     val customerId: Long = 0,
@@ -250,21 +260,53 @@ class CustomerFormViewModel(container: AppContainer, private val customerId: Lon
     val state: StateFlow<CustomerForm> = container.prefs.activeBusinessId
         .flatMapLatest { id ->
             if (id == null || id <= 0) flowOf(form.value)
-            else if (customerId > 0 && !form.value.loaded) {
-                catalog.observeCustomer(customerId).map { customer ->
-                    form.value.copy(
-                        businessId = id,
-                        customerId = customerId,
-                        loaded = true,
-                        name = customer?.name ?: "",
-                        phone = customer?.phone ?: "",
-                        email = customer?.email ?: "",
-                        address = customer?.address ?: "",
-                        tags = customer?.tags ?: "",
-                        notes = customer?.notes ?: ""
-                    )
-                }
-            } else flowOf(form.value.copy(businessId = id))
+            else
+                // The form value is combined with the business id so EVERY
+                // keystroke re-emits. Previously this was a one-shot
+                // flowOf(form.value) — the UI rendered the initial (empty)
+                // value forever and typed text never appeared.
+                combine(form, flowOf(id)) { f, businessId -> f.copy(businessId = businessId) }
+                    .flatMapLatest { f ->
+                        if (customerId > 0 && !f.loaded) {
+                            catalog.observeCustomer(customerId).map { customer ->
+                                val (loaded, fields) = FormInputSync.mergeLoaded(
+                                    f.loaded,
+                                    CustomerFields(
+                                        name = f.name,
+                                        phone = f.phone,
+                                        email = f.email,
+                                        address = f.address,
+                                        tags = f.tags,
+                                        notes = f.notes
+                                    ),
+                                    customer?.let {
+                                        CustomerFields(
+                                            name = it.name,
+                                            phone = it.phone.orEmpty(),
+                                            email = it.email.orEmpty(),
+                                            address = it.address.orEmpty(),
+                                            tags = it.tags.orEmpty(),
+                                            notes = it.notes.orEmpty()
+                                        )
+                                    },
+                                    f.name.isBlank() && f.phone.isBlank() &&
+                                    f.email.isBlank() && f.address.isBlank() &&
+                                    f.tags.isBlank() && f.notes.isBlank(),
+                                )
+                                f.copy(
+                                    businessId = id,
+                                    customerId = customerId,
+                                    loaded = loaded,
+                                    name = fields.name,
+                                    phone = fields.phone,
+                                    email = fields.email,
+                                    address = fields.address,
+                                    tags = fields.tags,
+                                    notes = fields.notes
+                                )
+                            }
+                        } else flowOf(f)
+                    }
         }
         .stateIn(
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default),
@@ -303,7 +345,17 @@ class CustomerFormViewModel(container: AppContainer, private val customerId: Lon
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess(onSaved).onFailure { e ->
-                    form.value = f.copy(saving = false, error = "Couldn't save customer: ${e.message}")
+                    val msg = e.message.orEmpty()
+                    form.value = f.copy(
+                        saving = false,
+                        error = if (msg.contains("FOREIGN KEY", ignoreCase = true) ||
+                            msg.contains("SQLITE_CONSTRAINT", ignoreCase = true)
+                        ) {
+                            "This customer could not be saved because one of its references no longer exists. Refresh and try again."
+                        } else {
+                            "This customer could not be saved. Please check the details and try again."
+                        }
+                    )
                 }
             }
         }
