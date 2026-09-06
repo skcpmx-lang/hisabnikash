@@ -1,5 +1,6 @@
 package com.hisabnikash.app.ui.orders
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,6 +46,7 @@ import com.hisabnikash.app.data.container.AppContainer
 import com.hisabnikash.app.data.db.OrderEntity
 import com.hisabnikash.app.domain.model.formatDateTime
 import com.hisabnikash.app.domain.model.formatMoney
+import com.hisabnikash.app.ui.components.AppTextField
 import com.hisabnikash.app.ui.components.EmptyState
 import com.hisabnikash.app.ui.components.FilterChips
 import com.hisabnikash.app.ui.components.ScreenFrame
@@ -130,13 +133,11 @@ private fun OrdersBody(
     onStatus: (String) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    OutlinedTextField(
-        value = query,
-        onValueChange = { query = it; onQuery(it) },
-        placeholder = { Text("Search order number or product") },
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+    AppTextField(
+        "Search",
+        query,
+        { query = it; onQuery(it) },
+        placeholder = "Order number or product"
     )
     FilterChips(ORDER_STATUSES, state.status, onStatus)
     if (state.orders.isEmpty()) {
@@ -225,13 +226,15 @@ fun OrderRow(
     channelName: String?,
     onClick: () -> Unit
 ) {
-    ElevatedCard(
+    Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-        shape = MaterialTheme.shapes.medium
+        shape = MaterialTheme.shapes.extraSmall,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {

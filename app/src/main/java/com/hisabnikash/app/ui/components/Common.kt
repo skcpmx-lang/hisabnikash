@@ -1,6 +1,8 @@
 package com.hisabnikash.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Surface
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -68,7 +71,28 @@ fun SectionCard(
 ) {
     ElevatedCard(
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        shape = MaterialTheme.shapes.medium
+        shape = MaterialTheme.shapes.medium,
+        elevation = androidx.compose.material3.CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), content = content)
+    }
+}
+
+/**
+ * Level-2 soft surface: a tonal container that groups related content without
+ * the visual weight of an elevated card. Used to break card monotony.
+ */
+@Composable
+fun TonalCard(
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = MaterialTheme.shapes.medium,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp), content = content)
     }
@@ -86,6 +110,7 @@ fun MetricCard(
     Box(
         modifier = modifier
             .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.small)
+            .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), MaterialTheme.shapes.small)
             .padding(14.dp)
     ) {
         Column {
@@ -218,8 +243,9 @@ fun EmptyState(
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .background(BrandGreenSoft, CircleShape),
+                .size(64.dp)
+                .background(BrandGreenSoft, CircleShape)
+                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))

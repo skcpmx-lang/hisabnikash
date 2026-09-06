@@ -61,6 +61,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
@@ -72,7 +80,10 @@ import com.hisabnikash.app.ui.components.AppTextField
 import com.hisabnikash.app.ui.components.BarChart
 import com.hisabnikash.app.ui.components.ChartPoint
 import com.hisabnikash.app.ui.components.FilterChips
+import com.hisabnikash.app.ui.components.EmptyState
 import com.hisabnikash.app.ui.components.MetricCard
+import com.hisabnikash.app.ui.components.StatRow
+import com.hisabnikash.app.ui.components.TonalCard
 import com.hisabnikash.app.ui.components.ScreenFrame
 import com.hisabnikash.app.ui.components.SectionHeader
 import com.hisabnikash.app.ui.nav.Routes
@@ -80,6 +91,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import com.hisabnikash.app.ui.theme.BrandGreen
+import com.hisabnikash.app.ui.theme.Spacing
 import com.hisabnikash.app.ui.theme.InkFaint
 import com.hisabnikash.app.ui.theme.Warning
 import com.hisabnikash.app.ui.vm.appViewModel
@@ -100,23 +112,6 @@ private data class MoreSection(val title: String, val links: List<MoreLink>)
 
 private val sections = listOf(
     MoreSection(
-        "Workspace",
-        listOf(
-            MoreLink("Business switcher", "Switch or add a business", Icons.Filled.Business, Routes.BUSINESS_SWITCHER),
-            MoreLink("Settings", "Profile, invoicing and defaults", Icons.Filled.Settings, Routes.SETTINGS),
-            MoreLink("App lock", "PIN and biometric protection", Icons.Filled.Security, Routes.SECURITY)
-        )
-    ),
-    MoreSection(
-        "Inventory & catalog",
-        listOf(
-            MoreLink("Inventory movements", "Every stock change in one log", Icons.Filled.Inventory2, Routes.INVENTORY),
-            MoreLink("Suppliers", "Suppliers, purchases and payables", Icons.Filled.Shop, Routes.SUPPLIERS),
-            MoreLink("Sales channels", "Facebook, Instagram, store…", Icons.Filled.SmartToy, Routes.CHANNELS),
-            MoreLink("Couriers", "Fees, defaults and settlements", Icons.Filled.LocalShipping, Routes.COURIERS)
-        )
-    ),
-    MoreSection(
         "Money",
         listOf(
             MoreLink("Accounts", "Cash, bank and wallets", Icons.Filled.AccountBalanceWallet, Routes.ACCOUNTS),
@@ -125,32 +120,64 @@ private val sections = listOf(
             MoreLink("Expenses", "Costs by category", Icons.Filled.ReceiptLong, Routes.EXPENSES),
             MoreLink("Receivables", "What customers owe", Icons.Filled.RequestQuote, Routes.RECEIVABLES),
             MoreLink("Payables", "What you owe suppliers", Icons.Filled.Paid, Routes.PAYABLES),
-            MoreLink("Courier settlements", "COD cash and fees", Icons.Filled.LocalShipping, Routes.SETTLEMENTS)
+            MoreLink("Courier settlements", "COD cash and fees", Icons.Filled.LocalShipping, Routes.SETTLEMENTS),
+            MoreLink("Refunds", "Money back records", Icons.Filled.Replay, Routes.REFUNDS)
+        )
+    ),
+    MoreSection(
+        "Stock",
+        listOf(
+            MoreLink("Inventory movements", "Every stock change in one log", Icons.Filled.Inventory2, Routes.INVENTORY),
+            MoreLink("Suppliers", "Suppliers, purchases and payables", Icons.Filled.Shop, Routes.SUPPLIERS)
+        )
+    ),
+    MoreSection(
+        "Delivery",
+        listOf(
+            MoreLink("Couriers", "Fees, defaults and settlements", Icons.Filled.LocalShipping, Routes.COURIERS),
+            MoreLink("Returns", "Stock back and refunds", Icons.Filled.Reply, Routes.RETURNS),
+            MoreLink("Exchanges", "Swaps and price differences", Icons.Filled.SwipeLeft, Routes.EXCHANGES)
+        )
+    ),
+    MoreSection(
+        "Growth",
+        listOf(
+            MoreLink("Campaigns", "Ad spend and ROAS", Icons.Filled.Campaign, Routes.CAMPAIGNS),
+            MoreLink("Budgets", "Spending limits", Icons.Filled.Book, Routes.BUDGETS),
+            MoreLink("Sales channels", "Facebook, Instagram, store…", Icons.Filled.SmartToy, Routes.CHANNELS)
+        )
+    ),
+    MoreSection(
+        "Reports",
+        listOf(
+            MoreLink("Analytics", "Revenue, profit and product mix", Icons.Filled.BarChart, Routes.ANALYTICS)
         )
     ),
     MoreSection(
         "Documents",
         listOf(
             MoreLink("Invoices", "Create, share and track", Icons.Filled.Description, Routes.INVOICES),
-            MoreLink("Receipts", "Proof for every payment", Icons.Filled.ReceiptLong, Routes.RECEIPTS),
-            MoreLink("Returns", "Stock back and refunds", Icons.Filled.Reply, Routes.RETURNS),
-            MoreLink("Exchanges", "Swaps and price differences", Icons.Filled.SwipeLeft, Routes.EXCHANGES),
-            MoreLink("Refunds", "Money back records", Icons.Filled.Replay, Routes.REFUNDS)
+            MoreLink("Receipts", "Proof for every payment", Icons.Filled.ReceiptLong, Routes.RECEIPTS)
         )
     ),
     MoreSection(
-        "Growth",
-        listOf(
-            MoreLink("Analytics", "Revenue, profit and product mix", Icons.Filled.BarChart, Routes.ANALYTICS),
-            MoreLink("Campaigns", "Ad spend and ROAS", Icons.Filled.Campaign, Routes.CAMPAIGNS),
-            MoreLink("Budgets", "Spending limits", Icons.Filled.Book, Routes.BUDGETS)
-        )
-    ),
-    MoreSection(
-        "Data & help",
+        "Tools",
         listOf(
             MoreLink("Backup & restore", "JSON export and import", Icons.Filled.Save, Routes.BACKUP),
-            MoreLink("Data health", "Check and repair records", Icons.Filled.HealthAndSafety, Routes.DATA_HEALTH),
+            MoreLink("Data health", "Check and repair records", Icons.Filled.HealthAndSafety, Routes.DATA_HEALTH)
+        )
+    ),
+    MoreSection(
+        "Settings",
+        listOf(
+            MoreLink("Business switcher", "Switch or add a business", Icons.Filled.Business, Routes.BUSINESS_SWITCHER),
+            MoreLink("Settings", "Profile, invoicing and defaults", Icons.Filled.Settings, Routes.SETTINGS),
+            MoreLink("App lock", "PIN and biometric protection", Icons.Filled.Security, Routes.SECURITY)
+        )
+    ),
+    MoreSection(
+        "Support",
+        listOf(
             MoreLink("Support", "How money is counted", Icons.Filled.SupportAgent, Routes.SUPPORT),
             MoreLink("About", "Version and privacy", Icons.Filled.HealthAndSafety, Routes.ABOUT)
         )
@@ -203,8 +230,8 @@ fun MoreTab(container: AppContainer, navController: NavHostController) {
             }
         }
 
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.OutlinedButton(onClick = { navController.navigate(Routes.ANALYTICS) }, modifier = Modifier.weight(1f)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { navController.navigate(Routes.ANALYTICS) }, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.BarChart, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
                 Text("Analytics")
@@ -218,34 +245,49 @@ fun MoreTab(container: AppContainer, navController: NavHostController) {
 
         sections.forEach { section ->
             SectionHeader(section.title)
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Column {
-                    section.links.forEachIndexed { index, link ->
-                        Row(
+            TonalCard {
+                section.links.forEachIndexed { index, link ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = { navController.navigate(link.route) })
+                            .padding(vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(onClick = { navController.navigate(link.route) })
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .size(36.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surface,
+                                    MaterialTheme.shapes.small
+                                )
+                                .border(
+                                    androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                    MaterialTheme.shapes.small
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(link.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(link.label, style = MaterialTheme.typography.titleSmall)
-                                Text(link.subtitle, style = MaterialTheme.typography.bodySmall, color = InkFaint)
-                            }
-                            androidx.compose.material3.Icon(
-                                Icons.Filled.SmartToy,
+                            Icon(
+                                link.icon,
                                 contentDescription = null,
-                                tint = InkFaint
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
-                        if (index < section.links.lastIndex) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(Modifier.width(Spacing.Md))
+                        Column(Modifier.weight(1f)) {
+                            Text(link.label, style = MaterialTheme.typography.titleSmall)
+                            Text(link.subtitle, style = MaterialTheme.typography.bodySmall, color = InkFaint, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
+                        androidx.compose.material3.Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = InkFaint
+                        )
+                    }
+                    if (index < section.links.lastIndex) {
+                        Spacer(Modifier.height(4.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
             }
@@ -260,20 +302,24 @@ fun MoreTab(container: AppContainer, navController: NavHostController) {
 
 data class AnalyticsUi(
     val loading: Boolean = true,
-    val period: String = "30D",
+    val period: String = "1D",
     val customFromAt: Long? = null,
     val customToAt: Long? = null,
     val metrics: com.hisabnikash.app.data.repo.MetricsBundle = com.hisabnikash.app.data.repo.MetricsBundle(),
     val chart: List<ChartPoint> = emptyList(),
     val topProducts: List<String> = emptyList(),
     val channels: List<String> = emptyList(),
-    val expenses: List<String> = emptyList()
+    val expenses: List<String> = emptyList(),
+    val customersServed: Int = 0,
+    val repeatCustomers: Int = 0,
+    val courierOrders: Long = 0,
+    val courierSpendMinor: Long = 0
 )
 
 class AnalyticsViewModel(container: AppContainer) : ViewModel() {
 
     private val insights = container.insightsRepository
-    private val periodFlow = MutableStateFlow("30D")
+    private val periodFlow = MutableStateFlow("1D")
     private val customRange = MutableStateFlow<Period?>(null)
 
     val state: StateFlow<AnalyticsUi> = container.prefs.activeBusinessId
@@ -289,7 +335,6 @@ class AnalyticsViewModel(container: AppContainer) : ViewModel() {
                             PeriodControl.resolve(period, now)
                         }
                         val metrics = insights.metrics(id, range.fromAt, range.toAt)
-                        val daily = insights.dailySeries(id, range.fromAt, range.toAt)
                         val products = insights.productSales(id, range.fromAt, range.toAt)
                             .sortedByDescending { it.revenueMinor }
                             .take(6)
@@ -297,6 +342,45 @@ class AnalyticsViewModel(container: AppContainer) : ViewModel() {
                             .sortedByDescending { it.orderCount }
                         val expenses = insights.expensesByCategory(id, range.fromAt, range.toAt)
                             .take(6)
+                        val allOrders = container.database.orderDao().allInRange(id, range.fromAt, range.toAt)
+                        val served = allOrders.mapNotNull { it.customerId }
+                            .filter { it > 0 }
+                            .distinct()
+                            .size
+                        val repeatCustomers = allOrders.mapNotNull { it.customerId }
+                            .filter { it > 0 }
+                            .groupingBy { it }
+                            .eachCount()
+                            .values.count { it > 1 }
+                        val chart = if (period == "1D") {
+                            insights.intradayBuckets(id, range.fromAt, range.toAt).map {
+                                val label = java.text.SimpleDateFormat("HH:00", java.util.Locale.US)
+                                    .format(java.util.Date(it.time))
+                                ChartPoint(
+                                    label,
+                                    it.revenueMinor / com.hisabnikash.app.domain.model.MoneyScale.SCALE.toFloat(),
+                                    formatMoney(it.revenueMinor)
+                                )
+                            }
+                        } else {
+                            val mode = when (period) {
+                                "90D" -> "WEEKLY"
+                                "1Y" -> "MONTHLY"
+                                else -> "DAILY"
+                            }
+                            insights.chartSeries(id, range.fromAt, range.toAt, mode).map {
+                                val label = if (period == "1Y") {
+                                    java.text.SimpleDateFormat("MMM", java.util.Locale.US).format(java.util.Date(it.time))
+                                } else {
+                                    java.text.SimpleDateFormat("d MMM", java.util.Locale.US).format(java.util.Date(it.time))
+                                }
+                                ChartPoint(
+                                    label,
+                                    it.revenueMinor / com.hisabnikash.app.domain.model.MoneyScale.SCALE.toFloat(),
+                                    formatMoney(it.revenueMinor)
+                                )
+                            }
+                        }
                         emit(
                             AnalyticsUi(
                                 loading = false,
@@ -304,16 +388,14 @@ class AnalyticsViewModel(container: AppContainer) : ViewModel() {
                                 customFromAt = if (period == "CUSTOM") custom?.fromAt else null,
                                 customToAt = if (period == "CUSTOM") custom?.toAt else null,
                                 metrics = metrics,
-                                chart = daily.map {
-                                    ChartPoint(
-                                        com.hisabnikash.app.domain.model.formatDay(it.time),
-                                        it.revenueMinor / com.hisabnikash.app.domain.model.MoneyScale.SCALE.toFloat(),
-                                        formatMoney(it.revenueMinor)
-                                    )
-                                },
+                                chart = chart,
                                 topProducts = products.map { "${it.name}: ${formatMoney(it.revenueMinor)}" },
                                 channels = channels.map { "${it.name ?: "Unassigned"}: ${it.orderCount} orders" },
-                                expenses = expenses.map { "${it.first}: ${formatMoney(it.second)}" }
+                                expenses = expenses.map { "${it.first}: ${formatMoney(it.second)}" },
+                                customersServed = served,
+                                repeatCustomers = repeatCustomers,
+                                courierOrders = metrics.deliveredCount,
+                                courierSpendMinor = metrics.courierMinor
                             )
                         )
                     }
@@ -368,10 +450,11 @@ fun AnalyticsScreenRoute(container: AppContainer, navController: NavHostControll
             )
         }
         val m = state.metrics
+        // ------------------------------------------------ KPI strip (hero first)
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-            MetricCard("Revenue", formatMoney(m.revenueMinor), Modifier.weight(1f))
-            MetricCard("Profit", formatMoney(m.netProfitMinor), Modifier.weight(1f))
-            MetricCard("Orders", "${m.deliveredCount}", Modifier.weight(1f))
+            MetricCard("Revenue", formatMoney(m.revenueMinor), Modifier.weight(1f), icon = Icons.Filled.Paid)
+            MetricCard("Profit", formatMoney(m.netProfitMinor), Modifier.weight(1f), icon = Icons.Filled.AccountBalanceWallet)
+            MetricCard("Orders", "${m.deliveredCount}", Modifier.weight(1f), icon = Icons.Filled.BarChart)
         }
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
@@ -379,23 +462,219 @@ fun AnalyticsScreenRoute(container: AppContainer, navController: NavHostControll
             MetricCard("Margin", com.hisabnikash.app.domain.model.formatPercent(m.marginBps), Modifier.weight(1f))
             MetricCard("ROAS", com.hisabnikash.app.domain.model.formatPercent(m.roasBps), Modifier.weight(1f))
         }
-        SectionHeader("Revenue trend")
-        BarChart(state.chart)
+
+        // ------------------------------------------------- revenue & profit chart
+        SectionHeader(if (state.period == "1D") "Revenue — today by hour" else "Revenue trend")
+        TonalCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(8.dp).background(BrandGreen, RoundedCornerShape(4.dp)))
+                Spacer(Modifier.width(6.dp))
+                Text("Revenue", style = MaterialTheme.typography.labelMedium, color = InkFaint)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "${state.chart.count { it.value > 0f }} active ${if (state.period == "1D") "hours" else "days"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = InkFaint
+                )
+            }
+            Spacer(Modifier.height(Spacing.Sm))
+            if (m.deliveredCount == 0L && m.revenueMinor == 0L) {
+                EmptyState(
+                    icon = Icons.Filled.BarChart,
+                    title = "No revenue yet",
+                    message = "Delivered orders in ${if (state.period == "1D") "today" else "this period"} appear here at their transaction time.",
+                    modifier = Modifier.padding(0.dp)
+                )
+            } else {
+                BarChart(state.chart, maxLabels = when (state.period) {
+                    "7D" -> 7
+                    "10D" -> 7
+                    else -> 8
+                })
+            }
+        }
+
+        // -------------------------------------------------------------- summary
+        SectionHeader("Summary")
+        TonalCard {
+            StatRow("Units sold", "${m.unitsSold}")
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow("COGS", formatMoney(m.cogsMinor))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow("Courier & delivery", formatMoney(m.courierMinor + m.packagingMinor))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow("Refunds", formatMoney(m.refundsMinor))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow("Expenses", formatMoney(m.expensesMinor))
+            if (m.advertisingMinor > 0) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                StatRow("Advertising", formatMoney(m.advertisingMinor))
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow("Orders created", "${m.orderCount}")
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow("Returned / cancelled", "${m.returnedCount} / ${m.cancelledCount}")
+        }
+
+        // ------------------------------------------------------------ top products
         SectionHeader("Top products")
-        if (state.topProducts.isEmpty()) Text("No sales in this period.", color = InkFaint, modifier = Modifier.padding(horizontal = 16.dp))
-        else state.topProducts.forEach {
-            Text("• $it", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 3.dp))
+        if (state.topProducts.isEmpty()) {
+            EmptyState(
+                icon = Icons.Filled.Inventory2,
+                title = "No product sales",
+                message = "Delivered orders with items will rank your best sellers here.",
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        } else {
+            TonalCard {
+                state.topProducts.forEachIndexed { index, row ->
+                    val parts = row.split(": ")
+                    val amount = parts.lastOrNull() ?: ""
+                    val name = if (parts.size > 1) parts.dropLast(1).joinToString(": ") else row
+                    RankingRow(index + 1, name, amount)
+                    if (index < state.topProducts.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
         }
+
+        // --------------------------------------------------------------- channels
         SectionHeader("By channel")
-        if (state.channels.isEmpty()) Text("No channel data.", color = InkFaint, modifier = Modifier.padding(horizontal = 16.dp))
-        else state.channels.forEach {
-            Text("• $it", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 3.dp))
+        if (state.channels.isEmpty()) {
+            EmptyState(
+                icon = Icons.Filled.Shop,
+                title = "No channel activity",
+                message = "Orders assigned to a channel are broken down here.",
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        } else {
+            TonalCard {
+                state.channels.forEachIndexed { index, row ->
+                    val parts = row.split(": ")
+                    val value = parts.lastOrNull() ?: ""
+                    val name = if (parts.size > 1) parts.dropLast(1).joinToString(": ") else row
+                    RankLine(name, value, icon = Icons.Filled.Shop)
+                    if (index < state.channels.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
         }
+
+        // ---------------------------------------------------------------- expenses
         SectionHeader("Expenses by category")
-        if (state.expenses.isEmpty()) Text("No expenses in this period.", color = InkFaint, modifier = Modifier.padding(horizontal = 16.dp))
-        else state.expenses.forEach {
-            Text("• $it", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 3.dp))
+        if (state.expenses.isEmpty()) {
+            EmptyState(
+                icon = Icons.Filled.ReceiptLong,
+                title = "No expenses",
+                message = "Expenses recorded in this period appear here by category.",
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        } else {
+            TonalCard {
+                state.expenses.forEachIndexed { index, row ->
+                    val parts = row.split(": ")
+                    val value = parts.lastOrNull() ?: ""
+                    val name = if (parts.size > 1) parts.dropLast(1).joinToString(": ") else row
+                    RankLine(name, value, icon = Icons.Filled.ReceiptLong, accent = false)
+                    if (index < state.expenses.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
         }
+
+        // --------------------------------------------------- customer & courier insights
+        SectionHeader("Customers")
+        TonalCard {
+            StatRow("Customers served", "${state.customersServed}")
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow("Repeat customers", "${state.repeatCustomers}")
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow(
+                "Repeat rate",
+                if (state.customersServed > 0) {
+                    com.hisabnikash.app.domain.model.formatPercent((state.repeatCustomers * 10_000 / state.customersServed))
+                } else "-"
+            )
+        }
+
+        SectionHeader("Courier & delivery")
+        TonalCard {
+            StatRow("Delivered orders", "${state.courierOrders}")
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow("Courier spend", formatMoney(state.courierSpendMinor))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            StatRow(
+                "Cost per delivery",
+                if (state.courierOrders > 0) formatMoney(state.courierSpendMinor / state.courierOrders) else "-"
+            )
+        }
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun RankingRow(rank: Int, name: String, amount: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .background(
+                    if (rank <= 3) BrandGreen else MaterialTheme.colorScheme.surface,
+                    RoundedCornerShape(8.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "$rank",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (rank <= 3) MaterialTheme.colorScheme.primary else InkFaint
+            )
+        }
+        Spacer(Modifier.width(Spacing.Md))
+        Text(
+            name,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(amount, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun RankLine(name: String, value: String, icon: ImageVector, accent: Boolean = true) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (accent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(Spacing.Md))
+        Text(
+            name,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
         Spacer(Modifier.height(20.dp))
     }
 }

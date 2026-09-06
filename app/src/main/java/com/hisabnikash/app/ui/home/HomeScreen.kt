@@ -21,7 +21,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Paid
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.RequestQuote
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
@@ -54,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
 import com.hisabnikash.app.data.container.AppContainer
+import com.hisabnikash.app.data.db.AuditEventEntity
 import com.hisabnikash.app.data.repo.MetricsBundle
 import com.hisabnikash.app.data.repo.PeriodControl
 import com.hisabnikash.app.domain.model.HealthEvaluator
@@ -62,6 +71,7 @@ import com.hisabnikash.app.domain.model.HealthSnapshot
 import com.hisabnikash.app.domain.model.HealthVerdict
 import com.hisabnikash.app.domain.model.SignalLevel
 import com.hisabnikash.app.domain.model.MoneyScale
+import com.hisabnikash.app.domain.model.formatDateTime
 import com.hisabnikash.app.domain.model.formatMoney
 import com.hisabnikash.app.domain.model.formatPercent
 import com.hisabnikash.app.ui.components.BarChart
@@ -71,11 +81,15 @@ import com.hisabnikash.app.ui.components.FilterChips
 import com.hisabnikash.app.ui.components.LinkRow
 import com.hisabnikash.app.ui.components.MetricCard
 import com.hisabnikash.app.ui.components.QuickActionTile
+import com.hisabnikash.app.ui.components.HealthGauge
 import com.hisabnikash.app.ui.components.SectionHeader
+import com.hisabnikash.app.ui.components.StatRow
+import com.hisabnikash.app.ui.components.TonalCard
 import com.hisabnikash.app.ui.components.orderStatusColor
 import com.hisabnikash.app.ui.components.SkeletonCard
 import com.hisabnikash.app.ui.nav.Routes
 import com.hisabnikash.app.ui.theme.BrandGold
+import com.hisabnikash.app.ui.theme.BrandGoldSoft
 import com.hisabnikash.app.ui.theme.BrandGreen
 import com.hisabnikash.app.ui.theme.BrandGreenSoft
 import com.hisabnikash.app.ui.theme.InkFaint
@@ -116,7 +130,10 @@ data class HomeUiState(
     val processing: List<com.hisabnikash.app.data.db.OrderEntity> = emptyList(),
     val unread: Long = 0,
     val health: HealthVerdict? = null,
-    val priorities: List<PriorityItem> = emptyList()
+    val priorities: List<PriorityItem> = emptyList(),
+    val customerCount: Int = 0,
+    val productCount: Int = 0,
+    val activity: List<AuditEventEntity> = emptyList()
 )
 
 class HomeViewModel(container: AppContainer) : ViewModel() {
@@ -157,12 +174,22 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
                 emit(chartFor(container, businessId, period, System.currentTimeMillis()))
             }
         }
-        val counters = combine(
+        val stockCounters = combine(
             catalog.observeLowStock(businessId),
             catalog.observeOutOfStock(businessId),
             orderRepo.observeProcessing(businessId),
             notifications.observeUnreadCount(businessId)
         ) { low, out, processing, unread -> LowOut(low, out, processing, unread) }
+        val metaCounters = combine(
+            catalog.observeCustomers(businessId).map { it.size },
+            catalog.observeProducts(businessId).map { it.size },
+            container.database.auditDao().observeRecent(businessId)
+        ) { customers, products, activity ->
+            MetaCounters(customers, products, activity)
+        }
+        val counters = combine(stockCounters, metaCounters) { stock, meta ->
+            CounterBundle(stock, meta)
+        }
 
         return combine(
             metricsPair,
@@ -172,10 +199,12 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
             workspace.observeActiveWorkspace()
         ) { pair, counts, counter, chart, ws ->
             val (metrics, previous) = pair
+            val stock = counter.stock
+            val meta = counter.meta
             val priorities = buildList {
-                if (counter.processing.isNotEmpty()) add(PriorityItem("${counter.processing.size} orders to process", "Confirmed to Shipped", Routes.MAIN))
-                if (counter.low.isNotEmpty()) add(PriorityItem("${counter.low.size} products low on stock", "Restock before they run out", Routes.INVENTORY))
-                if (counter.out.isNotEmpty()) add(PriorityItem("${counter.out.size} products out of stock", "Create a purchase to restock", Routes.NEW_PURCHASE))
+                if (stock.processing.isNotEmpty()) add(PriorityItem("${stock.processing.size} orders to process", "Confirmed to Shipped", Routes.MAIN))
+                if (stock.low.isNotEmpty()) add(PriorityItem("${stock.low.size} products low on stock", "Restock before they run out", Routes.INVENTORY))
+                if (stock.out.isNotEmpty()) add(PriorityItem("${stock.out.size} products out of stock", "Create a purchase to restock", Routes.NEW_PURCHASE))
                 if (metrics.codPendingMinor > 0) add(PriorityItem("Pending COD", formatMoney(metrics.codPendingMinor), Routes.SETTLEMENTS))
                 if (metrics.payablesMinor > 0) add(PriorityItem("Payables outstanding", formatMoney(metrics.payablesMinor), Routes.PAYABLES))
                 if (metrics.receivablesMinor > 0) add(PriorityItem("Receivables outstanding", formatMoney(metrics.receivablesMinor), Routes.RECEIVABLES))
@@ -190,10 +219,13 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
                 previous = previous,
                 chart = chart,
                 counts = counts,
-                lowStock = counter.low,
-                outOfStock = counter.out,
-                processing = counter.processing,
-                unread = counter.unread,
+                lowStock = stock.low,
+                outOfStock = stock.out,
+                processing = stock.processing,
+                unread = stock.unread,
+                customerCount = meta.customers,
+                productCount = meta.products,
+                activity = meta.activity.take(5),
                 health = HealthEvaluator.evaluate(
                     HealthSnapshot(
                         revenueMinor = metrics.revenueMinor,
@@ -206,8 +238,8 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
                         returnRateBps = metrics.returnRateBps,
                         orderCount = metrics.orderCount,
                         deliveredCount = metrics.deliveredCount,
-                        lowStockCount = counter.low.size.toLong(),
-                        outOfStockCount = counter.out.size.toLong(),
+                        lowStockCount = stock.low.size.toLong(),
+                        outOfStockCount = stock.out.size.toLong(),
                         adSpendMinor = metrics.adSpendMinor,
                         roasBps = metrics.roasBps
                     )
@@ -232,14 +264,25 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
                     }
                 }
         } else {
-            insights.dailySeries(businessId, current.fromAt, current.toAt).map {
+            val mode = when (period) {
+                "90D" -> "WEEKLY"
+                "1Y" -> "MONTHLY"
+                else -> "DAILY"
+            }
+            insights.chartSeries(businessId, current.fromAt, current.toAt, mode).map {
                 ChartPoint(
-                    SimpleDateFormat("d MMM", Locale.US).format(java.util.Date(it.time)),
+                    seriesLabel(it.time, period),
                     it.revenueMinor / MoneyScale.SCALE.toFloat(),
                     formatMoney(it.revenueMinor)
                 )
             }
         }
+    }
+
+    private fun seriesLabel(time: Long, period: String): String {
+        val date = java.util.Date(time)
+        return if (period == "1Y") SimpleDateFormat("MMM", Locale.US).format(date)
+        else SimpleDateFormat("d MMM", Locale.US).format(date)
     }
 
     fun setPeriod(period: String) {
@@ -262,6 +305,14 @@ private data class LowOut(
     val unread: Long
 )
 
+private data class MetaCounters(
+    val customers: Int,
+    val products: Int,
+    val activity: List<AuditEventEntity>
+)
+
+private data class CounterBundle(val stock: LowOut, val meta: MetaCounters)
+
 @Composable
 fun HomeTab(container: AppContainer, navController: NavHostController) {
     val vm = appViewModel(container) { HomeViewModel(it) }
@@ -277,24 +328,47 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
     val greeting = greetingText()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        // ------------------------------------------------------------ header
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.Lg, vertical = Spacing.Md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(greeting, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Text(
-                        state.userName.ifBlank { "Welcome" },
+                        greeting,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        state.userName.ifBlank { "Welcome back" },
                         style = MaterialTheme.typography.bodyMedium,
                         color = InkFaint
                     )
                 }
-                OutlinedButton(onClick = { navController.navigate(Routes.BUSINESS_SWITCHER) }) {
-                    Text(state.businessName.ifBlank { "Business" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Icon(Icons.Filled.UnfoldMore, contentDescription = "Switch business", modifier = Modifier.size(16.dp))
+                Surface(
+                    onClick = { navController.navigate(Routes.BUSINESS_SWITCHER) },
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            state.businessName.ifBlank { "Business" },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Filled.UnfoldMore, contentDescription = "Switch business", modifier = Modifier.size(14.dp), tint = InkFaint)
+                    }
                 }
                 Spacer(Modifier.width(4.dp))
                 BadgedBox(
@@ -312,58 +386,49 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
             }
         }
 
-        item { FilterChips(listOf("1D", "7D", "10D", "30D", "90D", "1Y", "Custom"), state.period, { vm.setPeriod(it) }) }
+        // -------------------------------------------------- period selector
+        item { FilterChips(listOf("1D", "7D", "10D", "30D", "90D", "1Y"), state.period, { vm.setPeriod(it) }) }
 
-        item {
-            SectionHeader("Today's overview")
-            Column(Modifier.padding(horizontal = 12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MetricCard("Revenue", formatMoney(state.metrics.revenueMinor), Modifier.weight(1f))
-                    MetricCard("Net profit", formatMoney(state.metrics.netProfitMinor), Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MetricCard("Orders", "${state.metrics.deliveredCount}", Modifier.weight(1f))
-                    MetricCard("Expenses", formatMoney(state.metrics.expensesMinor), Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MetricCard("Available cash", formatMoney(state.metrics.availableCashMinor), Modifier.weight(1f))
-                    MetricCard("COD pending", formatMoney(state.metrics.codPendingMinor), Modifier.weight(1f))
-                    MetricCard("Receivables", formatMoney(state.metrics.receivablesMinor), Modifier.weight(1f))
-                }
-            }
-        }
+        // ------------------------------------------------------ hero snapshot
+        item { DashboardHero(state) }
 
+        // -------------------------------------------------------- performance
         item {
-            SectionHeader(if (state.period == "1D") "Revenue — today by hour" else "Revenue")
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
-            ) {
-                if (state.metrics.deliveredCount == 0L && state.period == "1D") {
-                    EmptyState(
-                        Icons.Filled.PointOfSale,
-                        "No revenue recorded today",
-                        "Delivered orders appear here at the actual transaction time."
+            TonalCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (state.period == "1D") "Revenue — today by hour" else "Revenue trend",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(Modifier.height(Spacing.Sm))
+                if (state.metrics.deliveredCount == 0L && state.metrics.revenueMinor == 0L) {
+                    Text(
+                        "No revenue recorded in this period. Delivered orders appear here at their actual transaction time.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = InkFaint,
+                        modifier = Modifier.padding(vertical = 24.dp)
                     )
                 } else {
-                    BarChart(state.chart)
+                    BarChart(state.chart, maxLabels = chartMaxLabels(state.period))
                 }
             }
         }
 
+        // ------------------------------------------------------ quick actions
         item {
             SectionHeader("Quick actions")
-            Column(Modifier.padding(horizontal = 12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(horizontal = Spacing.Md)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.Md), modifier = Modifier.fillMaxWidth()) {
                     QuickActionTile("New Order", Icons.Filled.Article, { navController.navigate(Routes.NEW_ORDER) }, Modifier.weight(1f))
                     QuickActionTile("Add Product", Icons.Filled.Inventory2, { navController.navigate(Routes.NEW_PRODUCT) }, Modifier.weight(1f))
                     QuickActionTile("Add Customer", Icons.Filled.Group, { navController.navigate(Routes.NEW_CUSTOMER) }, Modifier.weight(1f))
                 }
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Spacer(Modifier.height(Spacing.Md))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.Md), modifier = Modifier.fillMaxWidth()) {
                     QuickActionTile("Record Payment", Icons.Filled.CreditCard, { navController.navigate(Routes.PAYMENT) }, Modifier.weight(1f))
                     QuickActionTile("Add Expense", Icons.Filled.ReceiptLong, { navController.navigate(Routes.EXPENSE) }, Modifier.weight(1f))
                     QuickActionTile("Create Invoice", Icons.Filled.Description, { navController.navigate(Routes.NEW_INVOICE) }, Modifier.weight(1f))
@@ -371,84 +436,263 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
             }
         }
 
+        // -------------------------------------------------------- order pipeline
         item {
-            SectionHeader("Order funnel")
+            SectionHeader("Order pipeline")
             OrderFunnelCard(state.counts) { status ->
                 navController.navigate(Routes.ordersFor(status))
             }
         }
 
-        item {
-            SectionHeader("Business pulse")
-            Column(Modifier.padding(horizontal = 12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MetricCard("Sales", formatMoney(state.metrics.revenueMinor), Modifier.weight(1f),
-                        trend = deltaLabel(state.metrics.revenueMinor, state.previous.revenueMinor),
-                        trendUp = state.metrics.revenueMinor >= state.previous.revenueMinor)
-                    MetricCard("Profit", formatMoney(state.metrics.netProfitMinor), Modifier.weight(1f),
-                        trend = deltaLabel(state.metrics.netProfitMinor, state.previous.netProfitMinor),
-                        trendUp = state.metrics.netProfitMinor >= state.previous.netProfitMinor)
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MetricCard("Orders", "${state.metrics.orderCount}", Modifier.weight(1f))
-                    MetricCard("AOV", formatMoney(state.metrics.aovMinor), Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    MetricCard("Returns", "${state.metrics.returnedCount} (${formatPercent(state.metrics.returnRateBps)})", Modifier.weight(1f))
-                    MetricCard("Margin", formatPercent(state.metrics.marginBps), Modifier.weight(1f))
-                }
-            }
-        }
-
+        // ------------------------------------------------------ business health
         item {
             SectionHeader("Business health")
             BusinessHealthCard(state.health)
         }
 
+        // ------------------------------------------------------------- operations
         item {
-            SectionHeader("Today's priorities")
-            if (state.priorities.isEmpty()) {
-                EmptyState(
-                    Icons.Filled.SwapHoriz,
-                    "All clear",
-                    "No urgent items right now. New priorities appear as your business moves."
+            SectionHeader("Operations")
+            TonalCard {
+                Text("Today's priorities", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(Spacing.Sm))
+                if (state.priorities.isEmpty()) {
+                    Text(
+                        "All clear — no urgent items right now. New priorities appear as your business moves.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = InkFaint,
+                        modifier = Modifier.padding(vertical = 6.dp)
+                    )
+                } else {
+                    state.priorities.forEach { item ->
+                        LinkRow(item.label, item.detail, { navController.navigate(item.route) }, modifier = Modifier.padding(horizontal = 0.dp))
+                    }
+                }
+                Spacer(Modifier.height(Spacing.Sm))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(Spacing.Sm))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    InventoryStat("Processing", "${state.processing.size}")
+                    InventoryStat("Low stock", "${state.lowStock.size}")
+                    InventoryStat("Out of stock", "${state.outOfStock.size}")
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------ money
+        item {
+            SectionHeader("Money")
+            TonalCard {
+                StatRow("Available cash", formatMoney(state.metrics.availableCashMinor))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                StatRow("COD pending", formatMoney(state.metrics.codPendingMinor))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                StatRow("Receivables", formatMoney(state.metrics.receivablesMinor))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                StatRow("Payables", formatMoney(state.metrics.payablesMinor))
+            }
+        }
+
+        // ------------------------------------------------------------- intelligence
+        item {
+            SectionHeader("Intelligence")
+            TonalCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Group, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Customers", style = MaterialTheme.typography.bodyMedium, color = InkFaint, modifier = Modifier.weight(1f))
+                    Text("${state.customerCount}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(Spacing.Sm))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Inventory2, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Products", style = MaterialTheme.typography.bodyMedium, color = InkFaint, modifier = Modifier.weight(1f))
+                    Text("${state.productCount}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                if (state.metrics.adSpendMinor > 0) {
+                    Spacer(Modifier.height(Spacing.Sm))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(Modifier.height(Spacing.Sm))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Campaign, contentDescription = null, tint = BrandGold, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Advertising", style = MaterialTheme.typography.bodyMedium, color = InkFaint, modifier = Modifier.weight(1f))
+                        Text(
+                            "${formatMoney(state.metrics.adSpendMinor)} • ROAS ${formatPercent(state.metrics.roasBps)}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------------- recent activity
+        item {
+            SectionHeader("Recent activity")
+            if (state.activity.isEmpty()) {
+                Text(
+                    "Actions like orders, payments and stock changes appear here.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkFaint,
+                    modifier = Modifier.padding(horizontal = Spacing.Lg, vertical = Spacing.Sm)
                 )
             } else {
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Column(Modifier.padding(vertical = 4.dp)) {
-                        state.priorities.forEach { item ->
-                            LinkRow(item.label, item.detail, { navController.navigate(item.route) })
+                TonalCard {
+                    state.activity.forEachIndexed { index, event ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier
+                                    .size(30.dp)
+                                    .background(BrandGreenSoft, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.History, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+                            }
+                            Spacer(Modifier.width(Spacing.Md))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    activityLabel(event),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    event.detail ?: formatDateTime(event.timestamp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = InkFaint
+                                )
+                            }
+                            Text(
+                                formatDateTime(event.timestamp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = InkFaint
+                            )
+                        }
+                        if (index < state.activity.lastIndex) {
+                            Spacer(Modifier.height(Spacing.Md))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            Spacer(Modifier.height(Spacing.Md))
                         }
                     }
                 }
             }
         }
 
+        // ---------------------------------------------------------------- footer
         item {
-            SectionHeader("Inventory watch")
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                MetricCard("Processing orders", "${state.processing.size}", Modifier.weight(1f))
-                MetricCard("Low stock", "${state.lowStock.size}", Modifier.weight(1f))
-                MetricCard("Out of stock", "${state.outOfStock.size}", Modifier.weight(1f))
-            }
-        }
-
-        item {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(Spacing.Xl))
             Text(
                 "HisabNikash — Your Complete Commerce OS",
                 style = MaterialTheme.typography.labelSmall,
                 color = InkFaint,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.Md),
                 textAlign = TextAlign.Center
             )
         }
     }
+}
+
+/** Executive hero: primary financials first, supporting cash strip beneath. */
+@Composable
+private fun DashboardHero(state: HomeUiState) {
+    val metrics = state.metrics
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.Lg, vertical = 6.dp),
+        shape = MaterialTheme.shapes.large,
+        elevation = androidx.compose.material3.CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(Modifier.padding(Spacing.Xxl)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(4.dp)
+                        .background(BrandGold, RoundedCornerShape(2.dp))
+                )
+                Spacer(Modifier.width(Spacing.Sm))
+                Text(
+                    if (state.period == "1D") "TODAY" else state.period,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandGold,
+                )
+                Spacer(Modifier.weight(1f))
+                val delta = deltaLabel(metrics.revenueMinor, state.previous.revenueMinor)
+                Text(delta, style = MaterialTheme.typography.labelSmall, color = InkFaint)
+            }
+            Spacer(Modifier.height(Spacing.Md))
+            Text(
+                formatMoney(metrics.revenueMinor),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                "Revenue",
+                style = MaterialTheme.typography.bodyMedium,
+                color = InkFaint
+            )
+            Spacer(Modifier.height(Spacing.Xxl))
+            Row {
+                HeroStat("Net profit", formatMoney(metrics.netProfitMinor), trailing = true, Modifier.weight(1f))
+                Box(Modifier.width(1.dp).height(36.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                HeroStat("Orders", "${metrics.deliveredCount}", trailing = true, Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(Spacing.Lg))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(Spacing.Lg))
+            Row {
+                HeroStat("Available cash", formatMoney(metrics.availableCashMinor), Modifier.weight(1f))
+                HeroStat("COD pending", formatMoney(metrics.codPendingMinor), Modifier.weight(1f))
+                HeroStat("Receivables", formatMoney(metrics.receivablesMinor), Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroStat(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    trailing: Boolean = false
+) {
+    Column(
+        modifier = modifier.padding(horizontal = Spacing.Sm),
+        horizontalAlignment = if (trailing) Alignment.Start else Alignment.Start
+    ) {
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(label, style = MaterialTheme.typography.labelSmall, color = InkFaint)
+    }
+}
+
+@Composable
+private fun InventoryStat(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = InkFaint)
+    }
+}
+
+private fun activityLabel(event: AuditEventEntity): String {
+    val type = event.entityType.lowercase().replaceFirstChar { it.uppercase() }
+    val action = event.action.substringBefore(':')
+        .lowercase()
+        .split('_')
+        .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+    return if (action.isBlank()) type else "$type $action"
 }
 
 private fun greetingText(): String {
@@ -521,7 +765,10 @@ private fun OrderFunnelCard(counts: Map<String, Long>, onStage: (String) -> Unit
                 color = InkFaint
             )
             Spacer(Modifier.height(Spacing.Sm))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.Sm)
+            ) {
                 EXCEPTION_STATUSES.forEach { status ->
                     Surface(
                         onClick = { onStage(status) },
@@ -556,13 +803,15 @@ private fun OrderFunnelCard(counts: Map<String, Long>, onStage: (String) -> Unit
 private fun FunnelStage(status: String, count: Long, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.width(84.dp)
+        // No fixed width: the stage grows to fit its content and the rail
+        // scrolls horizontally, so a stage can never truncate its label.
+        modifier = Modifier.padding(end = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -579,13 +828,16 @@ private fun FunnelStage(status: String, count: Long, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(Modifier.height(4.dp))
-            // Full status name. No maxLines, no ellipsis, no truncation.
+            Spacer(Modifier.height(5.dp))
             Text(
                 status.replaceFirstChar { it.uppercase() },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                // softWrap=false keeps the status on ONE line; the surface
+                // width follows the measured text, so nothing ever wraps,
+                // clips or ellipsizes — even at 150% font scale.
+                softWrap = false
             )
         }
     }
@@ -603,36 +855,61 @@ private fun BusinessHealthCard(health: HealthVerdict?) {
     ) {
         Column(Modifier.padding(Spacing.Lg)) {
             if (health == null) {
-                Text("Not enough data", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(Spacing.Sm))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .background(BrandGoldSoft, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.MonitorHeart,
+                            contentDescription = null,
+                            tint = BrandGold,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(Spacing.Md))
+                    Column {
+                        Text(
+                            "NOT ENOUGH DATA",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandGold
+                        )
+                        Text(
+                            "No score yet",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = InkFaint
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.Md))
                 Text(
-                    "Business health is computed from your own transactions. Record orders, expenses and stock movement to unlock your indicator.",
+                    "Business health is computed from your own transactions. Record at least one order, expense or stock movement and the indicator will appear — it is never guessed.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkFaint
                 )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "${health.score}",
-                        style = MaterialTheme.typography.displaySmall,
-                        color = BrandGold,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.width(Spacing.Lg))
-                    Column {
-                        Text(health.label, style = MaterialTheme.typography.titleMedium)
+                    HealthGauge(score = health.score, size = 120.dp)
+                    Spacer(Modifier.width(Spacing.Xl))
+                    Column(Modifier.weight(1f)) {
+                        Text(health.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             health.note,
                             style = MaterialTheme.typography.bodySmall,
                             color = InkFaint,
-                            maxLines = 2
+                            maxLines = 3
                         )
                         health.trendLabel?.let {
-                            Spacer(Modifier.height(2.dp))
+                            Spacer(Modifier.height(4.dp))
                             Text(
                                 it,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -692,6 +969,16 @@ private fun HealthIndicatorTile(indicator: HealthIndicator, modifier: Modifier =
             color = MaterialTheme.colorScheme.onSurface
         )
     }
+}
+
+private fun chartMaxLabels(period: String): Int = when (period) {
+    "1D" -> 8
+    "7D" -> 7
+    "10D" -> 7
+    "30D" -> 8
+    "90D" -> 8
+    "1Y" -> 8
+    else -> 8
 }
 
 private fun hourLabel(hour: Int): String {

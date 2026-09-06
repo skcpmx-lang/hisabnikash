@@ -88,10 +88,12 @@ fun FilterChips(
             val isSelected = option == selected
             Surface(
                 shape = RoundedCornerShape(50),
-                color = if (isSelected) BrandGreen else MaterialTheme.colorScheme.surface,
+                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surface,
                 border = BorderStroke(
                     1.dp,
-                    if (isSelected) BrandGreen else MaterialTheme.colorScheme.outline
+                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                    else MaterialTheme.colorScheme.outlineVariant
                 ),
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
@@ -100,8 +102,10 @@ fun FilterChips(
                 Text(
                     option,
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp)
                 )
             }
         }
@@ -140,8 +144,8 @@ fun QuickActionTile(
                 label,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                maxLines = 2,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 6.dp)
             )
         }

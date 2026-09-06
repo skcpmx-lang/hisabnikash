@@ -302,6 +302,45 @@ class InsightsRepository(private val db: AppDatabase) {
         }
     }
 
+    /**
+     * Aggregated presentation series over the real daily data. Nothing is
+     * invented or dropped: every delivered order/refund in range is included,
+     * simply rolled into weekly or monthly buckets so long periods stay
+     * readable while remaining complete.
+     */
+    suspend fun chartSeries(businessId: Long, fromAt: Long, toAt: Long, mode: String): List<DailyPoint> {
+        val daily = dailySeries(businessId, fromAt, toAt)
+        return when (mode) {
+            "WEEKLY" -> {
+                val weekMs = 7 * PeriodControl.DAY_MS
+                val map = LinkedHashMap<Long, MutableLongs>()
+                daily.forEach { point ->
+                    val bucket = point.time - (point.time % weekMs)
+                    val slot = map.getOrPut(bucket) { MutableLongs() }
+                    slot.revenue += point.revenueMinor
+                }
+                map.map { (time, v) -> DailyPoint(time = time, revenueMinor = v.revenue, ordersCount = 0) }
+            }
+            "MONTHLY" -> {
+                val cal = java.util.Calendar.getInstance()
+                val map = LinkedHashMap<Long, MutableLongs>()
+                daily.forEach { point ->
+                    cal.timeInMillis = point.time
+                    cal.set(java.util.Calendar.DAY_OF_MONTH, 1)
+                    cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    cal.set(java.util.Calendar.MINUTE, 0)
+                    cal.set(java.util.Calendar.SECOND, 0)
+                    cal.set(java.util.Calendar.MILLISECOND, 0)
+                    val bucket = cal.timeInMillis
+                    val slot = map.getOrPut(bucket) { MutableLongs() }
+                    slot.revenue += point.revenueMinor
+                }
+                map.map { (time, v) -> DailyPoint(time = time, revenueMinor = v.revenue, ordersCount = 0) }
+            }
+            else -> daily
+        }
+    }
+
     suspend fun intradayBuckets(businessId: Long, fromAt: Long, toAt: Long): List<DailyPoint> {
         val delivered = db.orderDao().allInRange(businessId, fromAt, toAt)
             .filter { it.status == OrderStatus.DELIVERED.name }

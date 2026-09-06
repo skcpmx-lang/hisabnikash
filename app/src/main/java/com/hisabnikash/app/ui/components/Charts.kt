@@ -7,14 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -28,13 +30,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hisabnikash.app.ui.theme.BrandGold
 import com.hisabnikash.app.ui.theme.BrandGreen
 import com.hisabnikash.app.ui.theme.ChartSeries
 import com.hisabnikash.app.ui.theme.InkFaint
@@ -52,7 +58,8 @@ fun BarChart(
     modifier: Modifier = Modifier,
     height: Int = 210,
     color: Color = BrandGreen,
-    highlightMax: Boolean = true
+    highlightMax: Boolean = true,
+    maxLabels: Int = 8
 ) {
     if (points.isEmpty()) {
         Text(
@@ -65,7 +72,9 @@ fun BarChart(
     }
     var selected by remember(points) { mutableIntStateOf(-1) }
     val maxValue = remember(points) { (points.maxOf { it.value }).coerceAtLeast(1f) }
-    val labelStep = remember(points.size) { if (points.size <= 9) 1 else (points.size / 8).coerceAtLeast(1) }
+    val labelStep = remember(points.size, maxLabels) {
+        ((points.size + maxLabels - 1) / maxLabels).coerceAtLeast(1)
+    }
     val selectedPoint = points.getOrNull(selected)
     val accessibility = points.joinToString("; ") { "${it.label}: ${it.detail ?: it.value}" }
     val gridColor = MaterialTheme.colorScheme.outlineVariant
@@ -120,7 +129,7 @@ fun BarChart(
                     leftPad - 6.dp.toPx(),
                     y + 4.dp.toPx(),
                     android.graphics.Paint().apply {
-                        setColor(android.graphics.Color.rgb(0x7C, 0x8A, 0x94))
+                        setColor(InkFaint.toArgb())
                         textSize = 9.sp.toPx()
                         textAlign = android.graphics.Paint.Align.RIGHT
                     }
@@ -144,7 +153,7 @@ fun BarChart(
                         x + barWidth / 2,
                         chartBottom + 14.dp.toPx(),
                         android.graphics.Paint().apply {
-                            setColor(android.graphics.Color.rgb(0x7C, 0x8A, 0x94))
+                            setColor(InkFaint.toArgb())
                             textSize = 9.sp.toPx()
                             textAlign = android.graphics.Paint.Align.CENTER
                         }
@@ -237,7 +246,7 @@ fun LineChart(
                         x,
                         size.height - 4.dp.toPx(),
                         android.graphics.Paint().apply {
-                            setColor(android.graphics.Color.rgb(0x7C, 0x8A, 0x94))
+                            setColor(InkFaint.toArgb())
                             textSize = 9.sp.toPx()
                             textAlign = android.graphics.Paint.Align.CENTER
                         }
@@ -322,6 +331,64 @@ fun DonutChart(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Radial health gauge: one premium visualization for the business-health
+ * indicator. The arc is deterministic from the score and uses the semantic
+ * state colors (emerald healthy / amber watch / red risk).
+ */
+@Composable
+fun HealthGauge(
+    score: Int,
+    modifier: Modifier = Modifier,
+    size: Dp = 132.dp
+) {
+    val track = MaterialTheme.colorScheme.surfaceAlt
+    val progressColor = when {
+        score >= 70 -> BrandGreen
+        score >= 50 -> BrandGold
+        else -> MaterialTheme.colorScheme.error
+    }
+    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = 12.dp.toPx()
+            val inset = stroke / 2 + 2.dp.toPx()
+            val arcSize = Size(size.width - inset * 2, size.height - inset * 2)
+            val topLeft = Offset(inset, inset)
+            drawArc(
+                color = track,
+                startAngle = 135f,
+                sweepAngle = 270f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
+            drawArc(
+                color = progressColor,
+                startAngle = 135f,
+                sweepAngle = 270f * score.coerceIn(0, 100) / 100f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "$score",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                "of 100",
+                style = MaterialTheme.typography.labelSmall,
+                color = InkFaint
+            )
         }
     }
 }

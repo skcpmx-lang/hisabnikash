@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,6 +36,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -73,6 +75,7 @@ import com.hisabnikash.app.ui.components.MoneyField
 import com.hisabnikash.app.ui.components.ScreenFrame
 import com.hisabnikash.app.ui.components.SectionHeader
 import com.hisabnikash.app.ui.components.StatusChip
+import com.hisabnikash.app.ui.components.TonalCard
 import com.hisabnikash.app.ui.theme.BrandGreenSoft
 import com.hisabnikash.app.ui.theme.InkFaint
 import com.hisabnikash.app.ui.theme.Spacing
@@ -199,13 +202,11 @@ fun ProductsTab(container: AppContainer, navController: NavHostController) {
                 MetricCard("Value", formatMoney(state.inventoryValueMinor), Modifier.weight(1f))
             }
             Spacer(Modifier.height(6.dp))
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = { vm.setQuery(it) },
-                placeholder = { Text("Search name, SKU or category") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+            AppTextField(
+                "Search",
+                state.query,
+                { vm.setQuery(it) },
+                placeholder = "Name, SKU or category"
             )
             FilterChips(
                 listOf("ALL", "ACTIVE", "LOW", "OUT"),
@@ -244,13 +245,15 @@ fun ProductRow(
     store: com.hisabnikash.app.data.media.ProductImageStore
 ) {
     val product = agg.product
-    ElevatedCard(
+    Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-        shape = MaterialTheme.shapes.medium
+        shape = MaterialTheme.shapes.extraSmall,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
-            Modifier.padding(14.dp),
+            Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             ProductThumbnail(product, store, Modifier)
@@ -483,6 +486,9 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
             return@ScreenFrame
         }
         AppTextField("Product name", state.name, { vm.setName(it) }, placeholder = "e.g. Cotton Kurti")
+        Spacer(Modifier.height(2.dp))
+
+        SectionHeader("Photo")
         if (productId == null || state.loaded) {
             ProductImageSection(
                 imagePath = state.imagePath,
@@ -490,94 +496,117 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
                 store = container.productImageStore
             )
         }
-        Row(Modifier.fillMaxWidth()) {
-            Column(Modifier.weight(1f)) { AppTextField("SKU", state.sku, { vm.setSku(it) }, placeholder = "SKU-001") }
-            Column(Modifier.weight(1f)) { AppTextField("Category", state.category, { vm.setCategory(it) }, placeholder = "Clothing") }
-        }
-        SectionHeader("Pricing & stock")
-        Row(Modifier.fillMaxWidth()) {
-            Column(Modifier.weight(1f)) { MoneyField("Selling price", parseMoneyInput(state.priceText) ?: 0, { vm.setPrice(it) }) }
-            Column(Modifier.weight(1f)) { MoneyField("Purchase cost", parseMoneyInput(state.costText) ?: 0, { vm.setCost(it) }) }
-        }
-        Row(Modifier.fillMaxWidth()) {
-            Column(Modifier.weight(1f)) {
-                AppTextField("Stock on hand", state.stockText, { vm.setStock(it) }, keyboardType = KeyboardType.Number)
-            }
-            Column(Modifier.weight(1f)) {
-                AppTextField("Low-stock alert at", state.thresholdText, { vm.setThreshold(it) }, keyboardType = KeyboardType.Number)
-            }
-        }
-        AppDropdown(
-            "Default supplier",
-            state.suppliers,
-            state.supplierId?.toString(),
-            { vm.setSupplier(it.id.toLong()) },
-            placeholder = "Not linked",
-            emptyTitle = "No suppliers yet",
-            emptyHint = "Link a supplier later from Purchases.",
-            addLabel = "Add Supplier",
-            onAdd = { navController.navigate(Routes.NEW_SUPPLIER) }
-        )
-        AppDropdown(
-            "Status",
-            listOf(
-                DropOption("ACTIVE", "Active — sellable"),
-                DropOption("INACTIVE", "Inactive — hidden from new orders")
-            ),
-            state.status,
-            { vm.setStatus(it.id) }
-        )
 
-        SectionHeader("Variants (optional)")
-        if (state.variants.isEmpty()) {
-            Text(
-                "Add size, colour or model options that can carry their own price and stock.",
-                style = MaterialTheme.typography.bodySmall,
-                color = InkFaint,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        SectionHeader("Info")
+        TonalCard {
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) { AppTextField("SKU", state.sku, { vm.setSku(it) }, placeholder = "SKU-001") }
+                Column(Modifier.weight(1f)) { AppTextField("Category", state.category, { vm.setCategory(it) }, placeholder = "Clothing") }
+            }
+            Spacer(Modifier.height(Spacing.Sm))
+            AppDropdown(
+                "Status",
+                listOf(
+                    DropOption("ACTIVE", "Active — sellable"),
+                    DropOption("INACTIVE", "Inactive — hidden from new orders")
+                ),
+                state.status,
+                { vm.setStatus(it.id) }
             )
         }
-        state.variants.forEachIndexed { index, variant ->
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = MaterialTheme.shapes.small
-            ) {
-                Column(Modifier.padding(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Variant ${index + 1}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { vm.removeVariant(index) }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Remove variant")
+
+        SectionHeader("Pricing")
+        TonalCard {
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) { MoneyField("Selling price", parseMoneyInput(state.priceText) ?: 0, { vm.setPrice(it) }) }
+                Column(Modifier.weight(1f)) { MoneyField("Purchase cost", parseMoneyInput(state.costText) ?: 0, { vm.setCost(it) }) }
+            }
+        }
+
+        SectionHeader("Inventory")
+        TonalCard {
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    AppTextField("Stock on hand", state.stockText, { vm.setStock(it) }, keyboardType = KeyboardType.Number)
+                }
+                Column(Modifier.weight(1f)) {
+                    AppTextField("Low-stock alert at", state.thresholdText, { vm.setThreshold(it) }, keyboardType = KeyboardType.Number)
+                }
+            }
+        }
+
+        SectionHeader("Supplier")
+        TonalCard {
+            AppDropdown(
+                "Default supplier",
+                state.suppliers,
+                state.supplierId?.toString(),
+                { vm.setSupplier(it.id.toLong()) },
+                placeholder = "Not linked",
+                emptyTitle = "No suppliers yet",
+                emptyHint = "Link a supplier later from Purchases.",
+                addLabel = "Add Supplier",
+                onAdd = { navController.navigate(Routes.NEW_SUPPLIER) }
+            )
+        }
+
+        SectionHeader("Variants (optional)")
+        TonalCard {
+            if (state.variants.isEmpty()) {
+                Text(
+                    "Add size, colour or model options that can carry their own price and stock.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkFaint,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+            state.variants.forEachIndexed { index, variant ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column(Modifier.padding(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Variant ${index + 1}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                            IconButton(onClick = { vm.removeVariant(index) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Remove variant")
+                            }
                         }
-                    }
-                    AppTextField("Name", variant.name, { vm.updateVariant(index, variant.copy(name = it)) }, placeholder = "e.g. Medium / Black")
-                    Row(Modifier.fillMaxWidth()) {
-                        Column(Modifier.weight(1f)) {
-                            AppTextField("SKU", variant.sku, { vm.updateVariant(index, variant.copy(sku = it)) })
+                        AppTextField("Name", variant.name, { vm.updateVariant(index, variant.copy(name = it)) }, placeholder = "e.g. Medium / Black")
+                        Row(Modifier.fillMaxWidth()) {
+                            Column(Modifier.weight(1f)) {
+                                AppTextField("SKU", variant.sku, { vm.updateVariant(index, variant.copy(sku = it)) })
+                            }
+                            Column(Modifier.weight(1f)) {
+                                AppTextField("Stock", variant.stockText, { vm.updateVariant(index, variant.copy(stockText = it.filter(Char::isDigit))) }, keyboardType = KeyboardType.Number)
+                            }
                         }
-                        Column(Modifier.weight(1f)) {
-                            AppTextField("Stock", variant.stockText, { vm.updateVariant(index, variant.copy(stockText = it.filter(Char::isDigit))) }, keyboardType = KeyboardType.Number)
-                        }
-                    }
-                    Row(Modifier.fillMaxWidth()) {
-                        Column(Modifier.weight(1f)) {
-                            MoneyField("Price", parseMoneyInput(variant.priceText) ?: 0, { vm.updateVariant(index, variant.copy(priceText = com.hisabnikash.app.domain.model.formatMoneyPlain(it))) })
-                        }
-                        Column(Modifier.weight(1f)) {
-                            MoneyField("Cost", parseMoneyInput(variant.costText) ?: 0, { vm.updateVariant(index, variant.copy(costText = com.hisabnikash.app.domain.model.formatMoneyPlain(it))) })
+                        Row(Modifier.fillMaxWidth()) {
+                            Column(Modifier.weight(1f)) {
+                                MoneyField("Price", parseMoneyInput(variant.priceText) ?: 0, { vm.updateVariant(index, variant.copy(priceText = com.hisabnikash.app.domain.model.formatMoneyPlain(it))) })
+                            }
+                            Column(Modifier.weight(1f)) {
+                                MoneyField("Cost", parseMoneyInput(variant.costText) ?: 0, { vm.updateVariant(index, variant.copy(costText = com.hisabnikash.app.domain.model.formatMoneyPlain(it))) })
+                            }
                         }
                     }
                 }
             }
-        }
-        TextButton(onClick = { vm.addVariant() }) {
-            Icon(Icons.Filled.Add, contentDescription = null)
-            Spacer(Modifier.width(4.dp))
-            Text("Add variant")
+            TextButton(onClick = { vm.addVariant() }, modifier = Modifier.align(Alignment.Start)) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("Add variant")
+            }
         }
 
         SectionHeader("Details")
-        AppTextField("Description", state.description, { vm.setDescription(it) }, singleLine = false, minLines = 2)
-        AppTextField("Internal notes", state.notes, { vm.setNotes(it) }, singleLine = false, minLines = 2)
+        TonalCard {
+            AppTextField("Description", state.description, { vm.setDescription(it) }, singleLine = false, minLines = 2)
+            Spacer(Modifier.height(Spacing.Sm))
+            AppTextField("Internal notes", state.notes, { vm.setNotes(it) }, singleLine = false, minLines = 2)
+        }
 
         state.error?.let {
             Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
@@ -593,8 +622,6 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
             enabled = !state.saving,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
         ) { Text(if (state.saving) "Saving…" else "Save product") }
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Product image
@@ -671,12 +698,8 @@ private fun ProductImageSection(
         }
     }
 
-    SectionHeader("Product image")
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.ScreenMargin, vertical = 6.dp),
-        shape = MaterialTheme.shapes.medium
-    ) {
-        Column(Modifier.padding(Spacing.Lg)) {
+    TonalCard {
+        Column {
             if (imagePath == null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -742,8 +765,8 @@ private fun ProductImageSection(
                         contentDescription = "Product photo",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(96.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .size(110.dp)
+                            .clip(RoundedCornerShape(14.dp))
                     )
                     Spacer(Modifier.width(Spacing.Lg))
                     Column(Modifier.weight(1f)) {

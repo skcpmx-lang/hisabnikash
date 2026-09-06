@@ -2,35 +2,55 @@ package com.hisabnikash.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// HisabNikash brand palette. Light mode only by design.
-val BrandGreen = Color(0xFF0E6E5C)
-val BrandGreenDark = Color(0xFF0A4E42)
-val BrandGreenDeep = Color(0xFF0B3D34)
-val BrandGreenSoft = Color(0xFFE2F0EC)
-val BrandGold = Color(0xFFE8A33D)
-val BrandGoldSoft = Color(0xFFFBF1DD)
+// ===========================================================================
+// HisabNikash design tokens — "Warm Ledger" identity.
+//
+// A calm, premium commerce OS palette: warm ivory base, deep navy/charcoal
+// ink, a sophisticated deep-emerald primary, and a restrained amber used ONLY
+// for financial highlights. No neon, no rainbow, no saturated green flood.
+// Light mode only by design.
+// ===========================================================================
 
-val Ink = Color(0xFF16212B)
-val InkSoft = Color(0xFF4A5A66)
-val InkFaint = Color(0xFF7C8A94)
+// Base surfaces (tonal layering: background -> surface -> tint -> alt)
+val Background = Color(0xFFF7F4ED)      // warm ivory app background
+val Surface = Color(0xFFFFFFFF)         // primary surface
+val SurfaceTint = Color(0xFFF0ECE2)     // secondary surface
+val SurfaceAlt = Color(0xFFE9E3D6)      // tertiary / sunken surface
 
-val Surface = Color(0xFFFFFFFF)
-val SurfaceTint = Color(0xFFF2F5F6)
-val SurfaceAlt = Color(0xFFE8EEF0)
-val Background = Color(0xFFF6F7F9)
-val OutlineSoft = Color(0xFFD9E0E3)
+// Ink hierarchy (deep navy-charcoal, never pure black)
+val Ink = Color(0xFF1C2530)
+val InkSoft = Color(0xFF48545F)
+val InkFaint = Color(0xFF7C8794)
 
-val Success = Color(0xFF1E8E5A)
-val Warning = Color(0xFFC98A1B)
-val Error = Color(0xFFC7452F)
-val Info = Color(0xFF2C6EA5)
+// Structure
+val OutlineSoft = Color(0xFFDCD5C7)     // warm stone borders
+val SurfaceStroke = Color(0xFFE4DFD3)
+
+// Brand
+val BrandGreen = Color(0xFF0F6B54)      // deep sophisticated emerald (primary)
+val BrandGreenDark = Color(0xFF0A4F3F)
+val BrandGreenDeep = Color(0xFF07392F)
+val BrandGreenSoft = Color(0xFFE4EFE9)  // soft emerald tint (selected/highlight)
+
+// Financial accent — restrained amber, never neon
+val BrandGold = Color(0xFFB8862B)
+val BrandGoldSoft = Color(0xFFF4ECDB)
+
+// Semantic states (muted, professional)
+val Success = Color(0xFF1F7B52)
+val Warning = Color(0xFFA37A1C)
+val Error = Color(0xFFB5452F)
+val Info = Color(0xFF3E6C9B)
+
+// Chart series: emerald -> slate -> amber -> violet -> teal -> rose -> stone -> bronze.
+// Muted enough to remain calm; distinct enough to be readable.
 val ChartSeries = listOf(
     BrandGreen,
-    Color(0xFF5B8DEF),
+    Color(0xFF54749E),
     BrandGold,
-    Color(0xFF9C6BE0),
-    Color(0xFF52A8A0),
-    Color(0xFFE06B8B),
+    Color(0xFF8A6FA8),
+    Color(0xFF5B978F),
+    Color(0xFFC57A8C),
     Color(0xFF7E9387),
-    Color(0xFFB07A3F)
+    Color(0xFFA9765A)
 )
