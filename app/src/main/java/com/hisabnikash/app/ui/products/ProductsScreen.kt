@@ -632,17 +632,11 @@ fun ProductFormRoute(container: AppContainer, navController: NavHostController, 
 /** Maps database failures to human-readable messages. Raw SQLite/constraint text
  * is never shown to the user; the underlying cause is fixed at the write path. */
 private object FriendlyErrors {
-    fun productSave(e: Throwable): String {
-        val msg = e.message.orEmpty()
-        if (e is IllegalStateException) return msg
-        if (e is IllegalArgumentException) return msg
-        if (msg.contains("FOREIGN KEY", ignoreCase = true) ||
-            msg.contains("SQLITE_CONSTRAINT", ignoreCase = true)
-        ) {
-            return "This product could not be saved because one of its references no longer exists. Refresh and try again."
-        }
-        return "This product could not be saved. Please check the details and try again."
-    }
+    fun productSave(e: Throwable): String =
+        com.hisabnikash.app.domain.model.SafeMessages.save(
+            e,
+            "This product could not be saved. Please check the details and try again."
+        )
 }
 
 // ---------------------------------------------------------------------------

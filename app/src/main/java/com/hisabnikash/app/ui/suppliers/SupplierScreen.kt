@@ -275,16 +275,12 @@ class SupplierFormViewModel(container: AppContainer, private val supplierId: Lon
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess(onSaved).onFailure { e ->
-                    val msg = e.message.orEmpty()
                     form.value = f.copy(
                         saving = false,
-                        error = if (msg.contains("FOREIGN KEY", ignoreCase = true) ||
-                            msg.contains("SQLITE_CONSTRAINT", ignoreCase = true)
-                        ) {
-                            "This supplier could not be saved because one of its references no longer exists. Refresh and try again."
-                        } else {
+                        error = com.hisabnikash.app.domain.model.SafeMessages.save(
+                            e,
                             "This supplier could not be saved. Please check the details and try again."
-                        }
+                        )
                     )
                 }
             }
