@@ -76,17 +76,15 @@ class NotificationsViewModel(container: AppContainer) : ViewModel() {
 
     fun markRead(container: AppContainer, id: Long) {
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
-            container.prefs.activeBusinessId.first()?.let { biz ->
-                container.notificationRepository.markRead(biz, id, true)
-            }
+            val biz = container.workspaceRepository.requireActiveBusiness()
+            container.notificationRepository.markRead(biz, id, true)
         }
     }
 
     fun markAllRead(container: AppContainer) {
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
-            container.prefs.activeBusinessId.first()?.let { biz ->
-                container.notificationRepository.markAllRead(biz)
-            }
+            val biz = container.workspaceRepository.requireActiveBusiness()
+            container.notificationRepository.markAllRead(biz)
         }
     }
 }

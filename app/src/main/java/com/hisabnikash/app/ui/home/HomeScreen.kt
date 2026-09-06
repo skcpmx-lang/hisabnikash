@@ -336,7 +336,7 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
         // Insights are regenerated on demand after mutations; this gives the
         // user a manual "check now" path as well.
         kotlinx.coroutines.CoroutineScope(Dispatchers.Default).launch {
-            prefs.activeBusinessId.first()?.let { notifications.generateInsights(it) }
+            container.workspaceRepository.requireActiveBusiness().let { notifications.generateInsights(it) }
         }
     }
 }
