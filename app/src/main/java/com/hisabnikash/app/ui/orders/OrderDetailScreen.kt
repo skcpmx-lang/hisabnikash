@@ -89,28 +89,42 @@ class OrderDetailViewModel(container: AppContainer, private val orderId: Long) :
     val state: StateFlow<OrderDetailUi> = container.prefs.activeBusinessId
         .flatMapLatest { id ->
             if (id == null || id <= 0) flowOf(OrderDetailUi().copy(loading = false))
-            else combine(
-                orders.observeOrderWithItems(orderId),
-                orders.observeStatusHistory(orderId),
-                orders.observePaymentsForOrder(id, orderId),
-                catalog.observeCustomers(id).map { list -> list.associate { it.customer.id to it.customer.name } },
-                finance.observeChannels(id).map { list -> list.associate { it.id to it.name } },
-                container.database.courierDao().observeAll(id).map { list -> list.associate { it.id to it.name } },
-                finance.observeAccounts(id).map { list ->
+            else {
+                val orderFlow = orders.observeOrderWithItems(orderId)
+                val historyFlow = orders.observeStatusHistory(orderId)
+                val paymentsFlow = orders.observePaymentsForOrder(id, orderId)
+                val customersFlow = catalog.observeCustomers(id).map { list ->
+                    list.associate { it.customer.id to it.customer.name }
+                }
+                val channelsFlow = finance.observeChannels(id).map { list ->
+                    list.associate { it.id to it.name }
+                }
+                val couriersFlow = container.database.courierDao().observeAll(id).map { list ->
+                    list.associate { it.id to it.name }
+                }
+                val accountsFlow = finance.observeAccounts(id).map { list ->
                     list.map { DropOption("${it.id}", it.name) }
                 }
-            ) { order, history, payments, customers, channels, couriers, accounts ->
-                OrderDetailUi(
-                    loading = false,
-                    businessId = id,
-                    order = order,
-                    history = history,
-                    payments = payments,
-                    customerName = order?.order?.customerId?.let { customers[it] },
-                    channelName = order?.order?.channelId?.let { channels[it] },
-                    courierName = order?.order?.courierId?.let { couriers[it] },
-                    accounts = accounts
-                )
+                val left = combine(orderFlow, historyFlow, paymentsFlow, customersFlow, channelsFlow) {
+                        order, history, payments, customers, channels ->
+                    OrderDetailLeft(order, history, payments, customers, channels)
+                }
+                val right = combine(couriersFlow, accountsFlow) { couriers, accounts ->
+                    OrderDetailRight(couriers, accounts)
+                }
+                combine(left, right) { l, r ->
+                    OrderDetailUi(
+                        loading = false,
+                        businessId = id,
+                        order = l.order,
+                        history = l.history,
+                        payments = l.payments,
+                        customerName = l.order?.order?.customerId?.let { l.customers[it] },
+                        channelName = l.order?.order?.channelId?.let { l.channels[it] },
+                        courierName = l.order?.order?.courierId?.let { r.couriers[it] },
+                        accounts = r.accounts
+                    )
+                }
             }
         }
         .stateIn(
@@ -409,3 +423,16 @@ fun OrderDetailRoute(container: AppContainer, navController: NavHostController, 
         Spacer(Modifier.height(16.dp))
     }
 }
+
+private data class OrderDetailLeft(
+    val order: OrderWithItems?,
+    val history: List<OrderStatusHistoryEntity>,
+    val payments: List<PaymentEntity>,
+    val customers: Map<Long, String>,
+    val channels: Map<Long, String>
+)
+
+private data class OrderDetailRight(
+    val couriers: Map<Long, String>,
+    val accounts: List<DropOption>
+)

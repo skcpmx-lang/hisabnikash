@@ -117,7 +117,7 @@ class InsightsRepository(private val db: AppDatabase) {
             db.orderDao().observeCogsInRange(businessId, fromAt, toAt),
             db.orderDao().observeUnitsInRange(businessId, fromAt, toAt),
             db.accountDao().observeTotalBalance(businessId),
-            db.receivablePayableDao().observeOutstanding(businessId),
+            db.receivablePayableDao().observePayablesOutstanding(businessId),
             db.campaignDao().observeInRange(businessId, fromAt, toAt)
         ) { cogs, units, cash, payables, campaigns ->
             ExtraSlice(cogs, units, cash, payables, campaigns)
@@ -220,7 +220,7 @@ class InsightsRepository(private val db: AppDatabase) {
         val aov = if (delivered.isEmpty()) 0 else revenue / delivered.size
         val margin = CommerceMath.marginPercentBps(profit, revenue)
         val returnRate = CommerceMath.returnRate(
-            orders.count { it.status == "RETURNED" },
+            orders.count { it.status == "RETURNED" }.toLong(),
             delivered.size.toLong()
         )
         val adSpend = campaigns.sumOf { it.spendMinor }
@@ -287,11 +287,11 @@ class InsightsRepository(private val db: AppDatabase) {
         }
         delivered.forEach { o ->
             val bucket = o.orderDate - (o.orderDate % dayMs)
-            map[bucket]?.apply { revenue += CommerceMath.orderRevenue(o) }
+            map[bucket]?.apply { this.revenue += CommerceMath.orderRevenue(o) }
         }
         refunds.forEach { r ->
             val bucket = r.dateAt - (r.dateAt % dayMs)
-            map[bucket]?.apply { refunds += r.amountMinor }
+            map[bucket]?.apply { this.refunds += r.amountMinor }
         }
         return map.map { (time, v) ->
             DailyPoint(
@@ -310,7 +310,7 @@ class InsightsRepository(private val db: AppDatabase) {
         delivered.forEach { o ->
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = o.orderDate }
             val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
-            buckets[hour]?.apply { revenue += CommerceMath.orderRevenue(o); orders += 1 }
+            buckets[hour]?.apply { this.revenue += CommerceMath.orderRevenue(o); this.orders += 1 }
         }
         return buckets.map { (hour, v) ->
             DailyPoint(

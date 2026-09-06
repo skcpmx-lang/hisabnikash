@@ -446,7 +446,7 @@ class InvoiceDetailViewModel(container: AppContainer, private val invoiceId: Lon
                 db.invoiceDao().observeById(invoiceId),
                 db.invoiceDao().observeItemsFor(invoiceId),
                 workspace.observeActiveWorkspace(),
-                db.receiptDao().observeForInvoice(invoiceId),
+                db.receiptDao().observeForInvoice(id, invoiceId),
                 finance.observeAccounts(id).map { list -> list.map { DropOption("${it.id}", it.name) } }
             ) { invoice, items, ws, receipts, accounts ->
                 InvoiceDetailUi(

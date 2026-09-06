@@ -124,6 +124,15 @@ interface LedgerDao {
     )
     suspend fun inRange(businessId: Long, fromAt: Long, toAt: Long): List<AccountTransactionEntity>
 
+    @Query(
+        """
+        SELECT * FROM account_transactions
+        WHERE businessId = :businessId AND dateAt BETWEEN :fromAt AND :toAt
+        ORDER BY dateAt ASC
+        """
+    )
+    fun observeInRange(businessId: Long, fromAt: Long, toAt: Long): Flow<List<AccountTransactionEntity>>
+
     @Query("SELECT * FROM account_transactions WHERE businessId = :businessId AND (note LIKE '%' || :query || '%' COLLATE NOCASE OR category LIKE '%' || :query || '%' COLLATE NOCASE) ORDER BY dateAt DESC LIMIT 200")
     suspend fun search(businessId: Long, query: String): List<AccountTransactionEntity>
 
@@ -264,7 +273,7 @@ interface ReceivablePayableDao {
     @Query(
         "SELECT COALESCE(SUM(amountMinor - paidMinor), 0) FROM payables WHERE businessId = :businessId AND status IN ('PENDING','PARTIAL','OVERDUE')"
     )
-    fun observeOutstanding(businessId: Long): Flow<Long>
+    fun observePayablesOutstanding(businessId: Long): Flow<Long>
 
     @Query(
         "SELECT COALESCE(SUM(amountMinor - paidMinor), 0) FROM payables WHERE businessId = :businessId AND status IN ('PENDING','PARTIAL','OVERDUE')"

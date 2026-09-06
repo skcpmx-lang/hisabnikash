@@ -476,11 +476,12 @@ fun BackupScreenRoute(container: AppContainer, navController: NavHostController)
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
-        if (uri == null || businessId == null) return@rememberLauncherForActivityResult
+        val bid = businessId
+        if (uri == null || bid == null) return@rememberLauncherForActivityResult
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
             try {
                 val file = File(context.cacheDir, "export-${System.currentTimeMillis()}.json")
-                val rows = container.backupRepository.exportToFile(file, businessId)
+                val rows = container.backupRepository.exportToFile(file, bid)
                 context.contentResolver.openOutputStream(uri)?.use { out ->
                     file.inputStream().use { it.copyTo(out) }
                 }
@@ -570,9 +571,9 @@ fun BackupScreenRoute(container: AppContainer, navController: NavHostController)
             SectionHeader("Confirm restore")
             ElevatedCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
                 Column(Modifier.padding(16.dp)) {
-                    LabelValueRow("Business", info.businessName)
+                    LabelValueRow("Business", "#${info.businessId}")
                     LabelValueRow("Exported", com.hisabnikash.app.domain.model.formatDateTime(info.exportedAt))
-                    LabelValueRow("Records", "${info.rows}")
+                    LabelValueRow("Records", "${info.rowCount}")
                     Text(
                         "Restoring REPLACES the current business's data with the backup contents.",
                         style = MaterialTheme.typography.bodySmall,
@@ -634,7 +635,7 @@ fun DataHealthScreenRoute(container: AppContainer, navController: NavHostControl
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                         running = false
                         report = result.getOrNull()
-                        message = result.fold({ "Check failed: ${it.message}" }, { null })
+                        message = result.fold({ null }, { "Check failed: ${it.message}" })
                     }
                 }
             },

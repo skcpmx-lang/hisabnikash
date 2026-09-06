@@ -26,17 +26,16 @@ data class HealthReport(val findings: List<HealthFinding>) {
 class DataHealthRepository(private val db: AppDatabase) {
 
     suspend fun checkBusiness(businessId: Long): HealthReport {
-        val database = db.openHelper.writableDatabase
+        val sql = db.openHelper.writableDatabase
         val findings = mutableListOf<HealthFinding>()
-        val sql = database
 
         fun count(query: String, vararg bind: String): Long =
-            sql.rawQuery(query.replace(":b", businessId.toString()), bind).use { c ->
+            sql.query(query.replace(":b", businessId.toString()), bind).use { c ->
                 if (c.moveToFirst()) c.getLong(0) else 0
             }
 
         fun exists(query: String): Boolean =
-            sql.rawQuery(query.replace(":b", businessId.toString()), arrayOf()).use { it.moveToFirst() }
+            sql.query(query.replace(":b", businessId.toString()), arrayOf<Any?>()).use { it.moveToFirst() }
 
         // Orphan records.
         val orphanMovements = count(

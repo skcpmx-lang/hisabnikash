@@ -43,7 +43,7 @@ import com.hisabnikash.app.data.db.CustomerAggregate
 import com.hisabnikash.app.data.db.CustomerEntity
 import com.hisabnikash.app.domain.model.formatDateTime
 import com.hisabnikash.app.domain.model.formatMoney
-import com.hisabnikash.app.domain.model.segmentFor
+import com.hisabnikash.app.domain.model.CommerceMath
 import com.hisabnikash.app.ui.components.AppTextField
 import com.hisabnikash.app.ui.components.EmptyState
 import com.hisabnikash.app.ui.components.LabelValueRow
@@ -427,7 +427,7 @@ fun CustomerDetailRoute(container: AppContainer, navController: NavHostControlle
                 LabelValueRow("Tags", customer.tags ?: "—")
                 LabelValueRow(
                     "Segment",
-                    segmentFor(
+                    CommerceMath.segmentFor(
                         state.orders.size.toLong(),
                         deliveredTotal,
                         state.orders.maxOfOrNull { it.orderDate },

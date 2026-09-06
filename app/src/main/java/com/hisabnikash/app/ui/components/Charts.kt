@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -67,6 +68,8 @@ fun BarChart(
     val labelStep = remember(points.size) { if (points.size <= 9) 1 else (points.size / 8).coerceAtLeast(1) }
     val selectedPoint = points.getOrNull(selected)
     val accessibility = points.joinToString("; ") { "${it.label}: ${it.detail ?: it.value}" }
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val baselineColor = MaterialTheme.colorScheme.outline
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (selectedPoint != null) {
@@ -106,7 +109,7 @@ fun BarChart(
             for (i in 0..gridCount) {
                 val y = chartTop + chartHeight * i / gridCount
                 drawLine(
-                    color = MaterialTheme.colorScheme.outlineVariant,
+                    color = gridColor,
                     start = Offset(leftPad, y),
                     end = Offset(chartRight, y),
                     strokeWidth = 1f
@@ -117,7 +120,7 @@ fun BarChart(
                     leftPad - 6.dp.toPx(),
                     y + 4.dp.toPx(),
                     android.graphics.Paint().apply {
-                        color = android.graphics.Color.rgb(0x7C, 0x8A, 0x94)
+                        setColor(android.graphics.Color.rgb(0x7C, 0x8A, 0x94))
                         textSize = 9.sp.toPx()
                         textAlign = android.graphics.Paint.Align.RIGHT
                     }
@@ -141,7 +144,7 @@ fun BarChart(
                         x + barWidth / 2,
                         chartBottom + 14.dp.toPx(),
                         android.graphics.Paint().apply {
-                            color = android.graphics.Color.rgb(0x7C, 0x8A, 0x94)
+                            setColor(android.graphics.Color.rgb(0x7C, 0x8A, 0x94))
                             textSize = 9.sp.toPx()
                             textAlign = android.graphics.Paint.Align.CENTER
                         }
@@ -150,7 +153,7 @@ fun BarChart(
             }
             // Baseline
             drawLine(
-                color = MaterialTheme.colorScheme.outline,
+                color = baselineColor,
                 start = Offset(leftPad, chartBottom),
                 end = Offset(chartRight, chartBottom),
                 strokeWidth = 1.5f
@@ -234,7 +237,7 @@ fun LineChart(
                         x,
                         size.height - 4.dp.toPx(),
                         android.graphics.Paint().apply {
-                            color = android.graphics.Color.rgb(0x7C, 0x8A, 0x94)
+                            setColor(android.graphics.Color.rgb(0x7C, 0x8A, 0x94))
                             textSize = 9.sp.toPx()
                             textAlign = android.graphics.Paint.Align.CENTER
                         }
@@ -278,7 +281,7 @@ fun DonutChart(
     colors: List<Color> = ChartSeries,
     centerLabel: String? = null
 ) {
-    val total = segments.sumOf { it.second }.coerceAtLeast(1f)
+    val total = segments.fold(0f) { acc, (_, value) -> acc + value }.coerceAtLeast(1f)
     Row(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier.size(110.dp),

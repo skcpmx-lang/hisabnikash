@@ -683,11 +683,9 @@ fun RefundFormRoute(container: AppContainer, navController: NavHostController) {
 @Composable
 fun RefundsListRoute(container: AppContainer, navController: NavHostController) {
     val refunds by container.workspaceRepository.observeActiveBusinessId()
-        .let { flow ->
-            kotlinx.coroutines.flow.flatMapLatest(flow) { id ->
-                if (id == null || id <= 0) kotlinx.coroutines.flow.flowOf(emptyList())
-                else container.database.refundDao().observeAll(id)
-            }
+        .flatMapLatest { id ->
+            if (id == null || id <= 0) flowOf(emptyList())
+            else container.database.refundDao().observeAll(id)
         }
         .collectAsState(initial = emptyList())
 
@@ -729,11 +727,9 @@ fun RefundsListRoute(container: AppContainer, navController: NavHostController) 
 @Composable
 fun ReturnsListRoute(container: AppContainer, navController: NavHostController) {
     val returns by container.workspaceRepository.observeActiveBusinessId()
-        .let { flow ->
-            kotlinx.coroutines.flow.flatMapLatest(flow) { id ->
-                if (id == null || id <= 0) kotlinx.coroutines.flow.flowOf(emptyList())
-                else container.database.returnDao().observeFiltered(id, "ALL")
-            }
+        .flatMapLatest { id ->
+            if (id == null || id <= 0) flowOf(emptyList())
+            else container.database.returnDao().observeFiltered(id, "ALL")
         }
         .collectAsState(initial = emptyList())
 
@@ -775,11 +771,9 @@ fun ReturnsListRoute(container: AppContainer, navController: NavHostController) 
 @Composable
 fun ExchangesListRoute(container: AppContainer, navController: NavHostController) {
     val exchanges by container.workspaceRepository.observeActiveBusinessId()
-        .let { flow ->
-            kotlinx.coroutines.flow.flatMapLatest(flow) { id ->
-                if (id == null || id <= 0) kotlinx.coroutines.flow.flowOf(emptyList())
-                else container.database.exchangeDao().observeAll(id)
-            }
+        .flatMapLatest { id ->
+            if (id == null || id <= 0) flowOf(emptyList())
+            else container.database.exchangeDao().observeAll(id)
         }
         .collectAsState(initial = emptyList())
 

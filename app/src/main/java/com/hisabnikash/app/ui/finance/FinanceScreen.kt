@@ -13,7 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.Coin
+import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.RequestQuote
@@ -239,7 +239,7 @@ fun PayablesScreenRoute(container: AppContainer, navController: NavHostControlle
         FilterChips(listOf("OPEN", "PARTIAL", "OVERDUE", "PAID"), state.status, { vm.setStatus(it) })
         if (state.items.isEmpty()) {
             EmptyState(
-                Icons.Filled.Coin,
+                Icons.Filled.Paid,
                 "Nothing owed",
                 "Purchase payables and custom payables appear here."
             )

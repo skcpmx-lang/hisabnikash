@@ -77,9 +77,9 @@ class BackupRepository(private val db: AppDatabase) {
                         val row = JSONObject()
                         columnNames.forEachIndexed { index, name ->
                             when (cursor.getType(index)) {
-                                SQLiteDatabase.CursorFieldType.FIELD_TYPE_NULL -> row.put(name, JSONObject.NULL)
-                                SQLiteDatabase.CursorFieldType.FIELD_TYPE_INTEGER -> row.put(name, cursor.getLong(index))
-                                SQLiteDatabase.CursorFieldType.FIELD_TYPE_FLOAT -> row.put(name, cursor.getDouble(index))
+                                android.database.Cursor.FIELD_TYPE_NULL -> row.put(name, JSONObject.NULL)
+                                android.database.Cursor.FIELD_TYPE_INTEGER -> row.put(name, cursor.getLong(index))
+                                android.database.Cursor.FIELD_TYPE_FLOAT -> row.put(name, cursor.getDouble(index))
                                 else -> row.put(name, cursor.getString(index))
                             }
                         }
@@ -145,7 +145,7 @@ class BackupRepository(private val db: AppDatabase) {
                         }
                     }
                     // Preserve original ids where present so relations survive.
-                    database.insertWithOnConflict(table, null, cv, SQLiteDatabase.CONFLICT_REPLACE)
+                    database.insert(table, android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE, cv)
                     inserted++
                 }
             }

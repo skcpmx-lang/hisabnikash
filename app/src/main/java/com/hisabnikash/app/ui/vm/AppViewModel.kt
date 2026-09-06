@@ -12,10 +12,10 @@ import com.hisabnikash.app.data.container.AppContainer
  * once per ViewModelStore, so each screen constructs one VM.
  */
 @Composable
-fun <VM : ViewModel> appViewModel(
+inline fun <reified VM : ViewModel> appViewModel(
     container: AppContainer,
     key: String? = null,
-    create: (AppContainer) -> VM
+    noinline create: (AppContainer) -> VM
 ): VM {
     val factory = remember {
         object : ViewModelProvider.Factory {

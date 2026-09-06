@@ -140,23 +140,23 @@ class OrderFormViewModel(container: AppContainer) : ViewModel() {
             OrderFormUi()
         )
 
-    fun setCustomer(id: Long?) = form.value = form.value.copy(customerId = id)
-    fun setChannel(id: Long?) = form.value = form.value.copy(channelId = id)
-    fun setCourier(id: Long?) = form.value = form.value.copy(courierId = id)
-    fun setStatus(status: String) = form.value = form.value.copy(status = status)
-    fun setDeliveryMode(mode: String) = form.value = form.value.copy(deliveryMode = mode)
-    fun setPaymentMethod(method: String) = form.value = form.value.copy(paymentMethod = method)
-    fun setDiscount(text: String) = form.value = form.value.copy(discountText = text)
-    fun setDelivery(text: String) = form.value = form.value.copy(deliveryText = text)
-    fun setAdvance(text: String) = form.value = form.value.copy(advanceText = text)
-    fun setCourierFee(text: String) = form.value = form.value.copy(courierFeeText = text)
-    fun setReturnCourierFee(text: String) = form.value = form.value.copy(returnCourierFeeText = text)
-    fun setPackaging(text: String) = form.value = form.value.copy(packagingText = text)
-    fun setAdvertising(text: String) = form.value = form.value.copy(advertisingText = text)
-    fun setOtherCost(text: String) = form.value = form.value.copy(otherCostText = text)
-    fun setTracking(text: String) = form.value = form.value.copy(trackingNo = text)
-    fun setNote(text: String) = form.value = form.value.copy(note = text)
-    fun setTags(text: String) = form.value = form.value.copy(tags = text)
+    fun setCustomer(id: Long?) { form.value = form.value.copy(customerId = id) }
+    fun setChannel(id: Long?) { form.value = form.value.copy(channelId = id) }
+    fun setCourier(id: Long?) { form.value = form.value.copy(courierId = id) }
+    fun setStatus(status: String) { form.value = form.value.copy(status = status) }
+    fun setDeliveryMode(mode: String) { form.value = form.value.copy(deliveryMode = mode) }
+    fun setPaymentMethod(method: String) { form.value = form.value.copy(paymentMethod = method) }
+    fun setDiscount(text: String) { form.value = form.value.copy(discountText = text) }
+    fun setDelivery(text: String) { form.value = form.value.copy(deliveryText = text) }
+    fun setAdvance(text: String) { form.value = form.value.copy(advanceText = text) }
+    fun setCourierFee(text: String) { form.value = form.value.copy(courierFeeText = text) }
+    fun setReturnCourierFee(text: String) { form.value = form.value.copy(returnCourierFeeText = text) }
+    fun setPackaging(text: String) { form.value = form.value.copy(packagingText = text) }
+    fun setAdvertising(text: String) { form.value = form.value.copy(advertisingText = text) }
+    fun setOtherCost(text: String) { form.value = form.value.copy(otherCostText = text) }
+    fun setTracking(text: String) { form.value = form.value.copy(trackingNo = text) }
+    fun setNote(text: String) { form.value = form.value.copy(note = text) }
+    fun setTags(text: String) { form.value = form.value.copy(tags = text) }
 
     fun addLine(productId: Long?, priceMinor: Long, costMinor: Long, name: String, sku: String?) {
         val current = form.value

@@ -24,15 +24,16 @@ import com.hisabnikash.app.domain.model.formatMoney
 import java.io.File
 import java.io.FileOutputStream
 
+/**
+ * Renders shareable/printable documents with the platform PDF APIs only.
+ * Money is formatted through the same engine used everywhere else.
+ */
 object DocumentPrinter {
 
     private const val PAGE_W = 595 // A4 at 72 dpi
     private const val PAGE_H = 842
-    private const val MARGIN = 42
+    private const val MARGIN = 42f
 
-    /**
-     * Renders an A4 invoice PDF. Pure platform APIs — no external PDF library.
-     */
     fun buildInvoicePdf(
         invoice: InvoiceEntity,
         items: List<InvoiceItemEntity>,
@@ -42,72 +43,74 @@ object DocumentPrinter {
     ): PdfDocument {
         val doc = PdfDocument()
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.color = Color.BLACK
         val bold = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = Color.BLACK
         }
-        val gold = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val brand = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(0x0E, 0x6E, 0x5C)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
 
-        var page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, 1).create())
-        var y = MARGIN + 8
+        var page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W.toInt(), PAGE_H.toInt(), 1).create())
+        var y = MARGIN + 8f
 
         // Header
         paint.textSize = 26f
-        gold.textSize = 26f
+        brand.textSize = 26f
         paint.setTypeface(Typeface.DEFAULT_BOLD)
         page.canvas.drawText(business?.name ?: "Business", MARGIN, y, paint)
         paint.setTypeface(Typeface.DEFAULT)
         paint.textSize = 12f
-        y += 22
+        y += 22f
         page.canvas.drawText(business?.address ?: "", MARGIN, y, paint)
-        y += 16
+        y += 16f
         page.canvas.drawText(business?.phone ?: "", MARGIN, y, paint)
-        y += 16
+        y += 16f
         page.canvas.drawText(business?.email ?: "", MARGIN, y, paint)
 
-        bold.textSize = 22f
-        gold.textSize = 22f
-        page.canvas.drawText("INVOICE", PAGE_W - MARGIN - 140f, MARGIN + 24, gold)
+        brand.textSize = 22f
+        page.canvas.drawText("INVOICE", PAGE_W - MARGIN - 140f, MARGIN + 24f, brand)
         bold.textSize = 13f
-        page.canvas.drawText(invoice.invoiceNo, PAGE_W - MARGIN - 140f, MARGIN + 46, bold)
+        page.canvas.drawText(invoice.invoiceNo, PAGE_W - MARGIN - 140f, MARGIN + 46f, bold)
         paint.textSize = 12f
-        page.canvas.drawText("Date: ${formatDate(invoice.dateAt)}", PAGE_W - MARGIN - 160f, MARGIN + 66, paint)
+        paint.setTypeface(Typeface.DEFAULT)
+        page.canvas.drawText("Date: ${formatDate(invoice.dateAt)}", PAGE_W - MARGIN - 160f, MARGIN + 66f, paint)
         if (invoice.dueDateAt != null) {
-            page.canvas.drawText("Due: ${formatDate(invoice.dueDateAt)}", PAGE_W - MARGIN - 160f, MARGIN + 84, paint)
+            page.canvas.drawText("Due: ${formatDate(invoice.dueDateAt)}", PAGE_W - MARGIN - 160f, MARGIN + 84f, paint)
         }
 
-        y = MARGIN + 150
+        y = MARGIN + 150f
         // Bill to
         bold.textSize = 13f
         page.canvas.drawText("Bill to", MARGIN, y, bold)
         paint.textSize = 12f
-        y += 20
+        y += 20f
         page.canvas.drawText(customer?.name ?: "Walk-in customer", MARGIN, y, paint)
         customer?.address?.let {
-            y += 16
+            y += 16f
             page.canvas.drawText(it, MARGIN, y, paint)
         }
         customer?.phone?.let {
-            y += 16
+            y += 16f
             page.canvas.drawText(it, MARGIN, y, paint)
         }
 
-        y += 40
+        y += 40f
         // Table header
         val col1 = MARGIN
-        val col2 = MARGIN + 300
-        val col3 = MARGIN + 400
-        val col4 = MARGIN + 460
-        gold.textSize = 11f
+        val col2 = MARGIN + 300f
+        val col3 = MARGIN + 400f
+        val col4 = MARGIN + 460f
+        bold.textSize = 11f
         page.canvas.drawText("ITEM", col1, y, bold)
         page.canvas.drawText("QTY", col2, y, bold)
         page.canvas.drawText("PRICE", col3, y, bold)
         page.canvas.drawText("TOTAL", col4, y, bold)
-        y += 8
-        page.canvas.drawLine(MARGIN.toFloat(), y, PAGE_W - MARGIN.toFloat(), y, paint)
-        y += 22
+        y += 8f
+        page.canvas.drawLine(MARGIN, y, PAGE_W - MARGIN, y, paint)
+        y += 22f
 
         paint.textSize = 12f
         for (item in items) {
@@ -115,58 +118,61 @@ object DocumentPrinter {
             page.canvas.drawText("${item.qty}", col2, y, paint)
             page.canvas.drawText(formatMoney(item.unitPriceMinor), col3, y, paint)
             page.canvas.drawText(formatMoney(item.lineTotalMinor), col4, y, paint)
-            y += 18
+            y += 18f
         }
 
-        y += 20
+        y += 20f
         paint.textSize = 12f
         page.canvas.drawText("Subtotal", col3, y, paint)
         page.canvas.drawText(formatMoney(invoice.subtotalMinor), col4, y, bold)
-        y += 18
+        y += 18f
         if (invoice.discountMinor > 0) {
             page.canvas.drawText("Discount", col3, y, paint)
             page.canvas.drawText("-" + formatMoney(invoice.discountMinor), col4, y, bold)
-            y += 18
+            y += 18f
         }
         if (invoice.deliveryMinor > 0) {
             page.canvas.drawText("Delivery", col3, y, paint)
             page.canvas.drawText(formatMoney(invoice.deliveryMinor), col4, y, bold)
-            y += 18
+            y += 18f
         }
         if (invoice.taxMinor > 0) {
             page.canvas.drawText("Tax", col3, y, paint)
             page.canvas.drawText(formatMoney(invoice.taxMinor), col4, y, bold)
-            y += 18
+            y += 18f
         }
-        y += 4
+        y += 4f
         bold.textSize = 14f
         page.canvas.drawText("TOTAL", col3, y, bold)
         page.canvas.drawText(formatMoney(invoice.totalMinor), col4, y, bold)
-        y += 22
+        y += 22f
         paint.textSize = 12f
         if (invoice.advanceMinor > 0) {
             page.canvas.drawText("Advance paid", col3, y, paint)
             page.canvas.drawText(formatMoney(invoice.advanceMinor), col4, y, bold)
-            y += 18
+            y += 18f
         }
         page.canvas.drawText("Balance due", col3, y, bold)
-        page.canvas.drawText(formatMoney((invoice.totalMinor - invoice.advanceMinor - invoice.paidMinor).coerceAtLeast(0)), col4, y, bold)
+        page.canvas.drawText(
+            formatMoney((invoice.totalMinor - invoice.advanceMinor - invoice.paidMinor).coerceAtLeast(0)),
+            col4, y, bold
+        )
 
-        y += 44
+        y += 44f
         paint.textSize = 11f
-        if (invoice.terms.isNotBlank()) {
+        if (!invoice.terms.isNullOrBlank()) {
             page.canvas.drawText("Terms", MARGIN, y, bold)
-            y += 16
+            y += 16f
             var lineY = y
             invoice.terms.split("\n").take(3).forEach { line ->
                 page.canvas.drawText(line.take(84), MARGIN, lineY, paint)
-                lineY += 14
+                lineY += 14f
             }
-            y = lineY + 20
+            y = lineY + 20f
         }
-        if (invoice.footer.isNotBlank()) {
+        if (!invoice.footer.isNullOrBlank()) {
             page.canvas.drawText(invoice.footer.take(84), MARGIN, y, paint)
-            y += 16
+            y += 16f
         }
         paint.textSize = 9f
         page.canvas.drawText("Generated by HisabNikash", MARGIN, PAGE_H - MARGIN, paint)
@@ -174,13 +180,13 @@ object DocumentPrinter {
         // Multi-page safety: if content ran off the page, start a second page.
         if (y > PAGE_H - MARGIN) {
             doc.finishPage(page)
-            page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, 2).create())
+            page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W.toInt(), PAGE_H.toInt(), 2).create())
             paint.textSize = 11f
-            page.canvas.drawText("Continued", MARGIN, MARGIN + 10, paint)
-            var yy = MARGIN + 30
+            page.canvas.drawText("Continued", MARGIN, MARGIN + 10f, paint)
+            var yy = MARGIN + 30f
             for (item in items) {
                 page.canvas.drawText("${item.name.take(40)}   ${item.qty} x ${formatMoney(item.unitPriceMinor)}", MARGIN, yy, paint)
-                yy += 14
+                yy += 14f
             }
         }
         doc.finishPage(page)
@@ -205,7 +211,7 @@ object DocumentPrinter {
         context.startActivity(Intent.createChooser(intent, "Share invoice"))
     }
 
-    fun printPdf(context: Context, label: String, file: File) {
+    fun printPdf(context: Context, file: File, jobName: String) {
         val manager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
         val adapter = object : PrintDocumentAdapter() {
             override fun onLayout(
@@ -220,9 +226,8 @@ object DocumentPrinter {
                     return
                 }
                 callback.onLayoutFinished(
-                    PrintDocumentInfo.Builder(label)
+                    PrintDocumentInfo.Builder(jobName)
                         .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-                        .setPageCount(1)
                         .build(),
                     true
                 )
@@ -230,20 +235,21 @@ object DocumentPrinter {
 
             override fun onWrite(
                 pages: Array<out PageRange>?,
-                destination: ParcelFileDescriptor,
+                destination: ParcelFileDescriptor?,
                 cancellationSignal: CancellationSignal?,
                 callback: PrintDocumentAdapter.WriteResultCallback
             ) {
                 try {
-                    ParcelFileDescriptor.AutoCloseOutputStream(destination).use { output ->
-                        file.inputStream().use { it.copyTo(output) }
+                    val output = destination?.let { ParcelFileDescriptor.AutoCloseOutputStream(it) } ?: return
+                    file.inputStream().use { input ->
+                        output.use { out -> input.copyTo(out) }
                     }
                     callback.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
                 } catch (e: Exception) {
-                    callback.onWriteFailed(e.message)
+                    callback.onWriteFailed(e.message ?: "Couldn't write document")
                 }
             }
         }
-        manager.print(label, adapter, PrintAttributes.Builder().build())
+        manager.print(jobName, adapter, PrintAttributes.Builder().build())
     }
 }

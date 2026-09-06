@@ -19,12 +19,12 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.Coin
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Replay
@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -112,7 +113,7 @@ private val sections = listOf(
             MoreLink("Transfers", "Move money between accounts", Icons.Filled.SwapHoriz, Routes.TRANSFERS),
             MoreLink("Expenses", "Costs by category", Icons.Filled.ReceiptLong, Routes.EXPENSES),
             MoreLink("Receivables", "What customers owe", Icons.Filled.RequestQuote, Routes.RECEIVABLES),
-            MoreLink("Payables", "What you owe suppliers", Icons.Filled.Coin, Routes.PAYABLES),
+            MoreLink("Payables", "What you owe suppliers", Icons.Filled.Paid, Routes.PAYABLES),
             MoreLink("Courier settlements", "COD cash and fees", Icons.Filled.LocalShipping, Routes.SETTLEMENTS)
         )
     ),

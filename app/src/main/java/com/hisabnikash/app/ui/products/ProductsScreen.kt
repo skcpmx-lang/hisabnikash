@@ -102,39 +102,43 @@ class ProductsViewModel(container: AppContainer) : ViewModel() {
             if (id == null || id <= 0) flowOf(ProductsUi().copy(loading = false))
             else combine(filterFlow, queryFlow) { f, q -> f to q }
                 .flatMapLatest { (filter, query) ->
-                    combine(
-                        catalog.observeProducts(id),
+                    val productsFlow = catalog.observeProducts(id)
+                    val left = combine(
+                        productsFlow,
                         catalog.observeInventoryValue(id),
                         catalog.observeTotalUnits(id),
                         catalog.observeLowStock(id),
-                        catalog.observeOutOfStock(id),
-                        catalog.observeProducts(id).map { list -> list.size.toLong() }
-                    ) { products, value, units, low, out, count ->
-                        val filtered = products.filter { agg ->
-                            when (filter) {
-                                "LOW" -> agg.product.stockQty > 0 && agg.product.stockQty <= agg.product.lowStockThreshold
-                                "OUT" -> agg.product.stockQty <= 0
-                                "ACTIVE" -> agg.product.status == "ACTIVE"
-                                else -> true
-                            }
-                        }.filter { agg ->
-                            query.isBlank() ||
-                                agg.product.name.contains(query, true) ||
-                                (agg.product.sku?.contains(query, true) == true) ||
-                                (agg.product.category?.contains(query, true) == true)
-                        }
-                        ProductsUi(
-                            loading = false,
-                            filter = filter,
-                            query = query,
-                            products = filtered,
-                            inventoryValueMinor = value,
-                            totalUnits = units,
-                            lowCount = low.size.toLong(),
-                            outCount = out.size.toLong(),
-                            productCount = count
-                        )
+                        catalog.observeOutOfStock(id)
+                    ) { products, value, units, low, out ->
+                        ProductsData(products, value, units, low.size.toLong(), out.size.toLong())
                     }
+                    combine(left, productsFlow) { data, full -> data to full.size.toLong() }
+                        .map { (data, count) ->
+                            val filtered = data.products.filter { agg ->
+                                when (filter) {
+                                    "LOW" -> agg.product.stockQty > 0 && agg.product.stockQty <= agg.product.lowStockThreshold
+                                    "OUT" -> agg.product.stockQty <= 0
+                                    "ACTIVE" -> agg.product.status == "ACTIVE"
+                                    else -> true
+                                }
+                            }.filter { agg ->
+                                query.isBlank() ||
+                                    agg.product.name.contains(query, true) ||
+                                    (agg.product.sku?.contains(query, true) == true) ||
+                                    (agg.product.category?.contains(query, true) == true)
+                            }
+                            ProductsUi(
+                                loading = false,
+                                filter = filter,
+                                query = query,
+                                products = filtered,
+                                inventoryValueMinor = data.inventoryValueMinor,
+                                totalUnits = data.totalUnits,
+                                lowCount = data.lowCount,
+                                outCount = data.outCount,
+                                productCount = count
+                            )
+                        }
                 }
         }
         .stateIn(
@@ -748,3 +752,11 @@ fun ProductDetailRoute(container: AppContainer, navController: NavHostController
         }
     }
 }
+
+private data class ProductsData(
+    val products: List<com.hisabnikash.app.data.db.ProductAggregate>,
+    val inventoryValueMinor: Long,
+    val totalUnits: Long,
+    val lowCount: Long,
+    val outCount: Long
+)

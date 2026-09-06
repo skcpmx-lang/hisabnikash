@@ -183,7 +183,7 @@ class FinanceRepository(private val db: AppDatabase) {
         db.receivablePayableDao().observePayablesForSupplier(businessId, supplierId)
 
     fun observePayablesOutstanding(businessId: Long) =
-        db.receivablePayableDao().observeOutstanding(businessId)
+        db.receivablePayableDao().observePayablesOutstanding(businessId)
 
     suspend fun saveCustomReceivable(receivable: ReceivableEntity): Long =
         if (receivable.id == 0L) db.receivablePayableDao().insertReceivable(receivable)
