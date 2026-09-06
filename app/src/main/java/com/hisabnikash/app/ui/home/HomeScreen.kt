@@ -398,7 +398,8 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
                 shape = MaterialTheme.shapes.medium
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    if (state.health == null) {
+                    val health = state.health
+                    if (health == null) {
                         Text("Not enough data", style = MaterialTheme.typography.titleMedium)
                         Text(
                             "Record orders to unlock your business health indicator.",
@@ -407,16 +408,16 @@ fun HomeTab(container: AppContainer, navController: NavHostController) {
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "${state.health.score}",
+                                "${health.score}",
                                 style = MaterialTheme.typography.displaySmall,
                                 color = BrandGold,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.width(10.dp))
                             Column {
-                                Text(state.health.label, style = MaterialTheme.typography.titleMedium)
+                                Text(health.label, style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    state.health.note,
+                                    health.note,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = InkFaint,
                                     maxLines = 2

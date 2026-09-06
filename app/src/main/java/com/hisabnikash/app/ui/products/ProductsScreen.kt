@@ -596,6 +596,7 @@ fun ProductDetailRoute(container: AppContainer, navController: NavHostController
         ProductDetailViewModel(it, productId)
     }
     val state by vm.state.collectAsState()
+    val catalog = container.catalogRepository
     var newStock by remember { mutableStateOf("") }
     var reason by remember { mutableStateOf("") }
     var adjusting by remember { mutableStateOf(false) }

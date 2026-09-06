@@ -138,9 +138,9 @@ class BackupRepository(private val db: AppDatabase) {
                     val cv = ContentValues()
                     row.keys().forEach { key ->
                         val value = row.opt(key)
-                        when (value) {
-                            is JSONObject.NULL -> cv.putNull(key)
-                            is Number -> cv.put(key, (value as Number).toLong())
+                        when {
+                            value == JSONObject.NULL -> cv.putNull(key)
+                            value is Number -> cv.put(key, value.toLong())
                             else -> cv.put(key, value.toString())
                         }
                     }

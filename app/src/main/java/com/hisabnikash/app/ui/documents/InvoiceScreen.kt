@@ -508,7 +508,7 @@ fun InvoiceDetailRoute(container: AppContainer, navController: NavHostController
                         DocumentPrinter.buildInvoicePdf(invoice, state.items, state.business, state.customer, state.settings),
                         invoice.invoiceNo
                     )
-                    DocumentPrinter.printPdf(context, invoice.invoiceNo, file)
+                    DocumentPrinter.printPdf(context, file, invoice.invoiceNo)
                 }) {
                     Icon(Icons.Filled.Print, contentDescription = "Print")
                     Text("Print")
