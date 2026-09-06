@@ -105,40 +105,30 @@ object Routes {
     fun account(id: Long) = "account/$id"
     fun accountEdit(id: Long) = "account/$id/edit"
 
-    const val CAMPAIGN = "campaign/{id}"
     const val NEW_CAMPAIGN = "campaign/new"
     const val CAMPAIGNS = "campaigns"
-    fun campaign(id: Long) = "campaign/$id"
 
-    const val BUDGET = "budget/{id}"
     const val NEW_BUDGET = "budget/new"
     const val BUDGETS = "budgets"
-    fun budget(id: Long) = "budget/$id"
 
     const val INVOICE = "invoice/{id}"
     const val NEW_INVOICE = "invoice/new"
     const val INVOICES = "invoices"
     fun invoice(id: Long) = "invoice/$id"
 
-    const val RETURN = "return/{id}"
     const val NEW_RETURN = "return/new"
     const val RETURN_FOR_ORDER = "return/from-order/{orderId}"
     const val RETURNS = "returns"
-    fun returnDetail(id: Long) = "return/$id"
     fun returnForOrder(orderId: Long) = "return/from-order/$orderId"
 
-    const val EXCHANGE = "exchange/{id}"
     const val NEW_EXCHANGE = "exchange/new"
     const val EXCHANGE_FOR_ORDER = "exchange/from-order/{orderId}"
     const val EXCHANGES = "exchanges"
-    fun exchange(id: Long) = "exchange/$id"
     fun exchangeForOrder(orderId: Long) = "exchange/from-order/$orderId"
 
-    const val REFUND = "refund/{id}"
     const val NEW_REFUND = "refund/new"
     const val REFUND_FOR_ORDER = "refund/from-order/{orderId}"
     const val REFUNDS = "refunds"
-    fun refund(id: Long) = "refund/$id"
     fun refundForOrder(orderId: Long) = "refund/from-order/$orderId"
 
     const val RECEIPTS = "receipts"
