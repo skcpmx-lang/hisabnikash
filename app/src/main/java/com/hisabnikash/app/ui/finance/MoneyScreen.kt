@@ -1,5 +1,6 @@
 package com.hisabnikash.app.ui.finance
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -154,10 +156,12 @@ fun AccountsScreenRoute(container: AppContainer, navController: NavHostControlle
             )
         } else {
             state.balances.forEach { balance ->
-                ElevatedCard(
+                Surface(
                     onClick = { navController.navigate(Routes.account(balance.account.id)) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -382,10 +386,12 @@ fun AccountDetailRoute(container: AppContainer, navController: NavHostController
             )
         } else {
             state.transactions.forEach { tx ->
-                ElevatedCard(
+                Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-                    shape = MaterialTheme.shapes.small
-                ) {
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -480,10 +486,12 @@ fun TransactionsScreenRoute(container: AppContainer, navController: NavHostContr
             )
         } else {
             state.transactions.forEach { tx ->
-                ElevatedCard(
+                Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-                    shape = MaterialTheme.shapes.small
-                ) {
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -552,10 +560,12 @@ fun TransfersScreenRoute(container: AppContainer, navController: NavHostControll
             )
         } else {
             state.transfers.forEach { transfer ->
-                ElevatedCard(
+                Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-                    shape = MaterialTheme.shapes.medium
-                ) {
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
                     Column(Modifier.padding(14.dp)) {
                         LabelValueRow("Amount", formatMoney(transfer.amountMinor))
                         LabelValueRow("From", "#${transfer.fromAccountId}")
@@ -734,10 +744,12 @@ fun ExpensesScreenRoute(container: AppContainer, navController: NavHostControlle
             )
         } else {
             state.expenses.forEach { expense ->
-                ElevatedCard(
+                Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-                    shape = MaterialTheme.shapes.small
-                ) {
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(
