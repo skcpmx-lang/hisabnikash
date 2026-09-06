@@ -60,6 +60,9 @@ interface ReturnDao {
     @Query("SELECT COUNT(*) FROM returns WHERE businessId = :businessId AND status NOT IN ('REJECTED','COMPLETED')")
     fun observePendingCount(businessId: Long): Flow<Long>
 
+    @Query("SELECT * FROM returns WHERE businessId = :businessId AND status NOT IN ('REJECTED','COMPLETED') ORDER BY createdAt DESC LIMIT 100")
+    suspend fun listPending(businessId: Long): List<ReturnEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(returns: List<ReturnEntity>)
 

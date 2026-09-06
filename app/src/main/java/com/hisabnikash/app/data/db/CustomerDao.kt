@@ -74,6 +74,27 @@ interface CustomerDao {
     )
     fun search(businessId: Long, query: String): Flow<List<CustomerAggregate>>
 
+    @Query(
+        """
+        SELECT c.*,
+          COALESCE(SUM(CASE WHEN o.status != 'CANCELLED' THEN 1 ELSE 0 END), 0) AS orderCount,
+          COALESCE(SUM(CASE WHEN o.status != 'CANCELLED' THEN o.totalMinor ELSE 0 END), 0) AS totalOrdersMinor,
+          COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN o.totalMinor ELSE 0 END), 0) AS deliveredOrdersMinor,
+          COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN o.codMinor ELSE 0 END), 0) AS codOutstandingMinor,
+          MAX(o.orderDate) AS lastOrderAt,
+          (SELECT COUNT(*) FROM returns r WHERE r.customerId = c.id AND r.businessId = :businessId) AS returnCount,
+          (SELECT COALESCE(SUM(r.amountMinor), 0) FROM refund_documents r WHERE r.customerId = c.id AND r.businessId = :businessId) AS refundsMinor
+        FROM customers c
+        LEFT JOIN orders o ON o.customerId = c.id AND o.businessId = c.businessId
+        WHERE c.businessId = :businessId
+          AND (c.name LIKE '%' || :query || '%' COLLATE NOCASE OR c.phone LIKE '%' || :query || '%' OR c.email LIKE '%' || :query || '%')
+        GROUP BY c.id
+        ORDER BY c.name COLLATE NOCASE
+        LIMIT 100
+        """
+    )
+    suspend fun searchOnce(businessId: Long, query: String): List<CustomerAggregate>
+
     @Query("SELECT * FROM customers WHERE businessId = :businessId ORDER BY name COLLATE NOCASE LIMIT 1000")
     suspend fun listAll(businessId: Long): List<CustomerEntity>
 

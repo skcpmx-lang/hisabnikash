@@ -68,6 +68,9 @@ interface LedgerDao {
     @Query("SELECT * FROM account_transactions WHERE id = :id")
     suspend fun getById(id: Long): AccountTransactionEntity?
 
+    @Query("DELETE FROM account_transactions WHERE businessId = :businessId AND refType = :refType AND refId = :refId")
+    suspend fun deleteForRef(businessId: Long, refType: String, refId: Long)
+
     @Query(
         """
         SELECT * FROM account_transactions
@@ -83,6 +86,12 @@ interface LedgerDao {
             "FROM account_transactions WHERE businessId = :businessId AND dateAt BETWEEN :fromAt AND :toAt"
     )
     suspend fun netInRange(businessId: Long, fromAt: Long, toAt: Long): Long
+
+    @Query(
+        "SELECT COALESCE(SUM(CASE WHEN direction = 'IN' THEN amountMinor ELSE -amountMinor END), 0) " +
+            "FROM account_transactions WHERE businessId = :businessId"
+    )
+    suspend fun netAllTime(businessId: Long): Long
 
     @Query(
         "SELECT COALESCE(SUM(CASE WHEN direction = 'IN' THEN amountMinor ELSE 0 END), 0) " +
@@ -184,6 +193,12 @@ interface ReceivablePayableDao {
     @Query("SELECT * FROM receivables WHERE id = :id")
     suspend fun getReceivable(id: Long): ReceivableEntity?
 
+    @Query("SELECT * FROM receivables WHERE businessId = :businessId AND sourceType = :sourceType AND sourceId = :sourceId LIMIT 1")
+    suspend fun findReceivable(businessId: Long, sourceType: String, sourceId: Long): ReceivableEntity?
+
+    @Query("SELECT * FROM receivables WHERE businessId = :businessId AND sourceType = 'COD' AND status != 'PAID' ORDER BY id ASC")
+    suspend fun openCodReceivables(businessId: Long): List<ReceivableEntity>
+
     @Query(
         """
         SELECT * FROM receivables WHERE businessId = :businessId AND (:status = 'ALL' OR status = :status)
@@ -229,6 +244,11 @@ interface ReceivablePayableDao {
         "SELECT COALESCE(SUM(amountMinor - paidMinor), 0) FROM payables WHERE businessId = :businessId AND status IN ('PENDING','PARTIAL','OVERDUE')"
     )
     fun observeOutstanding(businessId: Long): Flow<Long>
+
+    @Query(
+        "SELECT COALESCE(SUM(amountMinor - paidMinor), 0) FROM payables WHERE businessId = :businessId AND status IN ('PENDING','PARTIAL','OVERDUE')"
+    )
+    suspend fun outstandingPayablesMinor(businessId: Long): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAllReceivables(receivables: List<ReceivableEntity>)

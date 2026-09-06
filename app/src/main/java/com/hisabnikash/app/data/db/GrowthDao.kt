@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CampaignDao {
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(campaign: CampaignEntity): Long
 
     @Query("SELECT * FROM campaigns WHERE id = :id")
@@ -20,6 +20,9 @@ interface CampaignDao {
 
     @Query("SELECT * FROM campaigns WHERE businessId = :businessId ORDER BY startAt DESC, id DESC")
     fun observeAll(businessId: Long): Flow<List<CampaignEntity>>
+
+    @Query("SELECT * FROM campaigns WHERE businessId = :businessId AND startAt BETWEEN :fromAt AND :toAt ORDER BY startAt ASC")
+    suspend fun allInRange(businessId: Long, fromAt: Long, toAt: Long): List<CampaignEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(campaigns: List<CampaignEntity>)
@@ -53,7 +56,7 @@ interface ChannelDao {
 @Dao
 interface BudgetDao {
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(budget: BudgetEntity): Long
 
     @Query("SELECT * FROM budgets WHERE businessId = :businessId AND (:category = 'ALL' OR category = :category) ORDER BY periodStart DESC, id DESC")
@@ -92,6 +95,9 @@ interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM notifications WHERE businessId = :businessId AND read = 0")
     fun observeUnreadCount(businessId: Long): Flow<Long>
+
+    @Query("SELECT * FROM notifications WHERE businessId = :businessId AND title = :title AND read = 0 AND createdAt >= :since LIMIT 1")
+    suspend fun findOpen(businessId: Long, title: String, since: Long): AppNotificationEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(notifications: List<AppNotificationEntity>)

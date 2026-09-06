@@ -42,6 +42,11 @@ interface InvoiceDao {
     @Query("SELECT * FROM invoices WHERE businessId = :businessId AND invoiceNo LIKE '%' || :query || '%' COLLATE NOCASE ORDER BY dateAt DESC LIMIT 200")
     suspend fun search(businessId: Long, query: String): List<InvoiceEntity>
 
+    @Query(
+        "SELECT * FROM invoices WHERE businessId = :businessId AND status IN ('ISSUED','PARTIALLY_PAID') AND dueDateAt IS NOT NULL AND dueDateAt < :now ORDER BY dueDateAt ASC LIMIT 100"
+    )
+    suspend fun listOverdue(businessId: Long, now: Long): List<InvoiceEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(invoices: List<InvoiceEntity>)
 

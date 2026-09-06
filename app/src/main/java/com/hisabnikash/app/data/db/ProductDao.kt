@@ -71,6 +71,25 @@ interface ProductDao {
     )
     fun search(businessId: Long, query: String): Flow<List<ProductAggregate>>
 
+    @Query(
+        """
+        SELECT p.*,
+          COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.qty ELSE 0 END), 0) AS unitsSold,
+          COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.lineTotalMinor ELSE 0 END), 0) AS revenueMinor,
+          COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.qty * oi.unitCostMinor ELSE 0 END), 0) AS cogsMinor,
+          MAX(o.orderDate) AS lastSaleAt
+        FROM products p
+        LEFT JOIN order_items oi ON oi.productId = p.id AND oi.businessId = p.businessId
+        LEFT JOIN orders o ON o.id = oi.orderId AND o.businessId = p.businessId
+        WHERE p.businessId = :businessId
+          AND (p.name LIKE '%' || :query || '%' COLLATE NOCASE OR IFNULL(p.sku,'') LIKE '%' || :query || '%' COLLATE NOCASE)
+        GROUP BY p.id
+        ORDER BY p.name COLLATE NOCASE
+        LIMIT 100
+        """
+    )
+    suspend fun searchOnce(businessId: Long, query: String): List<ProductAggregate>
+
     @Query("SELECT * FROM products WHERE businessId = :businessId ORDER BY name COLLATE NOCASE")
     suspend fun listAll(businessId: Long): List<ProductEntity>
 
@@ -95,8 +114,14 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE businessId = :businessId AND status = 'ACTIVE' AND stockQty <= lowStockThreshold AND stockQty > 0 ORDER BY stockQty ASC LIMIT 100")
     fun observeLowStock(businessId: Long): Flow<List<ProductEntity>>
 
+    @Query("SELECT * FROM products WHERE businessId = :businessId AND status = 'ACTIVE' AND stockQty <= lowStockThreshold AND stockQty > 0 ORDER BY stockQty ASC LIMIT 100")
+    suspend fun listLowStock(businessId: Long): List<ProductEntity>
+
     @Query("SELECT * FROM products WHERE businessId = :businessId AND status = 'ACTIVE' AND stockQty = 0 ORDER BY name COLLATE NOCASE LIMIT 100")
     fun observeOutOfStock(businessId: Long): Flow<List<ProductEntity>>
+
+    @Query("SELECT * FROM products WHERE businessId = :businessId AND status = 'ACTIVE' AND stockQty = 0 ORDER BY name COLLATE NOCASE LIMIT 100")
+    suspend fun listOutOfStock(businessId: Long): List<ProductEntity>
 
     @Query("UPDATE products SET stockQty = :stockQty, updatedAt = :now WHERE id = :id")
     suspend fun updateStock(id: Long, stockQty: Long, now: Long = System.currentTimeMillis())

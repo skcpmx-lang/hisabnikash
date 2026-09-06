@@ -35,6 +35,9 @@ interface SupplierDao {
     @Query("SELECT * FROM suppliers WHERE businessId = :businessId ORDER BY name COLLATE NOCASE")
     suspend fun listAll(businessId: Long): List<SupplierEntity>
 
+    @Query("SELECT * FROM suppliers WHERE businessId = :businessId AND (name LIKE '%' || :query || '%' COLLATE NOCASE OR IFNULL(phone,'') LIKE '%' || :query || '%') ORDER BY name COLLATE NOCASE LIMIT 100")
+    suspend fun search(businessId: Long, query: String): List<SupplierEntity>
+
     @Query("SELECT * FROM suppliers WHERE businessId = :businessId ORDER BY name COLLATE NOCASE")
     fun observeAll(businessId: Long): Flow<List<SupplierEntity>>
 

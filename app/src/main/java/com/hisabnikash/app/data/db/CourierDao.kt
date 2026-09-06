@@ -62,6 +62,9 @@ interface CourierDao {
     @Query("SELECT * FROM courier_settlements WHERE businessId = :businessId AND courierId = :courierId ORDER BY dateAt DESC LIMIT 300")
     fun observeForCourier(businessId: Long, courierId: Long): Flow<List<CourierSettlementEntity>>
 
+    @Query("SELECT * FROM courier_settlements WHERE businessId = :businessId AND pendingMinor > 0 ORDER BY dateAt DESC LIMIT 100")
+    suspend fun listPending(businessId: Long): List<CourierSettlementEntity>
+
     @Query(
         """
         SELECT
