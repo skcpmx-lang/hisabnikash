@@ -211,8 +211,8 @@ object CommerceMath {
             revenueMinor >= 10_000_000L -> "VIP"
             revenueMinor >= 5_000_000L -> "HIGH_VALUE"
             orderCount >= 2 -> "RETURNING"
-            sinceLast != null && sinceLast > 90 * dayMs -> "AT_RISK"
             sinceLast != null && sinceLast > 180 * dayMs -> "INACTIVE"
+            sinceLast != null && sinceLast > 90 * dayMs -> "AT_RISK"
             else -> "NEW"
         }
     }
