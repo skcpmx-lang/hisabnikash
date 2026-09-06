@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.hisabnikash.app.domain.model.BusinessContextTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-09-06T15:51:39" hostname="runnervmejwal" time="0.001">
+  <properties/>
+  <testcase name="zero placeholder id is never used even if latest exists" classname="com.hisabnikash.app.domain.model.BusinessContextTest" time="0.0"/>
+  <testcase name="preferred real id wins over latest" classname="com.hisabnikash.app.domain.model.BusinessContextTest" time="0.0"/>
+  <testcase name="negative id is never used" classname="com.hisabnikash.app.domain.model.BusinessContextTest" time="0.0"/>
+  <testcase name="no business anywhere refuses the write" classname="com.hisabnikash.app.domain.model.BusinessContextTest" time="0.0"/>
+  <testcase name="stale preferred falls back to latest real business" classname="com.hisabnikash.app.domain.model.BusinessContextTest" time="0.001"/>
+  <testcase name="stale preferred with no fallback refuses the write" classname="com.hisabnikash.app.domain.model.BusinessContextTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

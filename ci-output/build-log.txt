@@ -1,0 +1,146 @@
+Fetching distribution.
+Downloading https://services.gradle.org/distributions/gradle-8.9-bin.zip
+............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 8.9!
+
+Here are the highlights of this release:
+ - Enhanced Error and Warning Messages
+ - IDE Integration Improvements
+ - Daemon JVM Information
+
+For more details see https://docs.gradle.org/8.9/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.9/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:mergeDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:processDebugManifestForPackage
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:javaPreCompileDebug
+> Task :app:buildKotlinToolingMetadata
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:generateReleaseBuildConfig
+> Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseResValues FROM-CACHE
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
+> Task :app:processDebugResources
+> Task :app:packageReleaseResources
+> Task :app:parseReleaseLocalResources FROM-CACHE
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease FROM-CACHE
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:javaPreCompileRelease FROM-CACHE
+> Task :app:extractProguardFiles
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:processReleaseManifestForPackage
+> Task :app:mergeReleaseNativeLibs
+> Task :app:mergeReleaseResources
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:desugarReleaseFileDependencies
+> Task :app:mergeReleaseStartupProfile
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so.
+
+> Task :app:kspDebugKotlin
+> Task :app:processReleaseResources
+> Task :app:mergeExtDexRelease
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:optimizeReleaseResources
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:kspReleaseKotlin
+> Task :app:compileDebugKotlin
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/data/repo/BackupRepository.kt:144:49 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'kotlin.Any?'.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/components/Common.kt:203:27 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/customers/CustomersScreen.kt:498:37 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/customers/CustomersScreen.kt:539:37 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/documents/InvoiceScreen.kt:568:37 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/finance/MoneyScreen.kt:741:30 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/home/HomeScreen.kt:498:63 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/home/HomeScreen.kt:505:65 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:118:68 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:136:72 'val Icons.Filled.Reply: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Reply.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:158:74 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:567:37 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:578:63 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/orders/OrderDetailScreen.kt:357:35 'val Icons.Filled.Reply: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Reply.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/orders/OrdersScreen.kt:145:26 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/returns/ReturnsScreen.kt:742:30 'val Icons.Filled.Reply: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Reply.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/shell/MainShell.kt:39:36 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/data/repo/BackupRepository.kt:144:49 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'kotlin.Any?'.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/components/Common.kt:203:27 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/customers/CustomersScreen.kt:498:37 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/customers/CustomersScreen.kt:539:37 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/documents/InvoiceScreen.kt:568:37 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/finance/MoneyScreen.kt:741:30 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/home/HomeScreen.kt:498:63 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/home/HomeScreen.kt:505:65 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:118:68 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:136:72 'val Icons.Filled.Reply: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Reply.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:158:74 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:567:37 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/more/MoreScreen.kt:578:63 'val Icons.Filled.ReceiptLong: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ReceiptLong.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/orders/OrderDetailScreen.kt:357:35 'val Icons.Filled.Reply: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Reply.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/orders/OrdersScreen.kt:145:26 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/returns/ReturnsScreen.kt:742:30 'val Icons.Filled.Reply: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Reply.
+w: file:///home/runner/work/hisabnikash/hisabnikash/app/src/main/java/com/hisabnikash/app/ui/shell/MainShell.kt:39:36 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:compileDebugJavaWithJavac
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:kspDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:dexBuilderRelease
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:testDebugUnitTest
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:processReleaseJavaRes
+> Task :app:mergeReleaseJavaResource
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:mergeDexRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:assembleRelease
+
+BUILD SUCCESSFUL in 5m 9s
+77 actionable tasks: 73 executed, 4 from cache
+GRADLE_EXIT=0

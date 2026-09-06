@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.hisabnikash.app.domain.HealthEvaluatorTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-09-06T15:51:39" hostname="runnervmejwal" time="0.033">
+  <properties/>
+  <testcase name="healthy growth and margin earn a good score" classname="com.hisabnikash.app.domain.HealthEvaluatorTest" time="0.024"/>
+  <testcase name="expenses exceeding revenue is a watch signal" classname="com.hisabnikash.app.domain.HealthEvaluatorTest" time="0.001"/>
+  <testcase name="no transaction history means not enough data" classname="com.hisabnikash.app.domain.HealthEvaluatorTest" time="0.0"/>
+  <testcase name="out of stock and high returns pull the score down" classname="com.hisabnikash.app.domain.HealthEvaluatorTest" time="0.001"/>
+  <testcase name="declining revenue is flagged as watch" classname="com.hisabnikash.app.domain.HealthEvaluatorTest" time="0.0"/>
+  <testcase name="score is always within 0-100" classname="com.hisabnikash.app.domain.HealthEvaluatorTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.hisabnikash.app.domain.CustomerSegmentTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-09-06T15:51:39" hostname="runnervmejwal" time="0.002">
+  <properties/>
+  <testcase name="high spend outranks recency-based segments" classname="com.hisabnikash.app.domain.CustomerSegmentTest" time="0.0"/>
+  <testcase name="single order 100 days old is at risk" classname="com.hisabnikash.app.domain.CustomerSegmentTest" time="0.0"/>
+  <testcase name="single order 200 days old is inactive" classname="com.hisabnikash.app.domain.CustomerSegmentTest" time="0.0"/>
+  <testcase name="ten day preset covers ten days" classname="com.hisabnikash.app.domain.CustomerSegmentTest" time="0.0"/>
+  <testcase name="one day preset covers today only" classname="com.hisabnikash.app.domain.CustomerSegmentTest" time="0.0"/>
+  <testcase name="repeat customer is returning even after long gap" classname="com.hisabnikash.app.domain.CustomerSegmentTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

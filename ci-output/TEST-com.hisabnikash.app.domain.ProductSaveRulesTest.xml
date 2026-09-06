@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.hisabnikash.app.domain.ProductSaveRulesTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-09-06T15:51:39" hostname="runnervmejwal" time="0.004">
+  <properties/>
+  <testcase name="zero and negative ids mean not linked" classname="com.hisabnikash.app.domain.ProductSaveRulesTest" time="0.0"/>
+  <testcase name="missing supplier is rejected with friendly message" classname="com.hisabnikash.app.domain.ProductSaveRulesTest" time="0.003"/>
+  <testcase name="existing supplier of same business is accepted" classname="com.hisabnikash.app.domain.ProductSaveRulesTest" time="0.0"/>
+  <testcase name="not linked resolves to null" classname="com.hisabnikash.app.domain.ProductSaveRulesTest" time="0.0"/>
+  <testcase name="supplier from another business cannot be assigned" classname="com.hisabnikash.app.domain.ProductSaveRulesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

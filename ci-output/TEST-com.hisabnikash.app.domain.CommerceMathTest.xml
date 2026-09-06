@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.hisabnikash.app.domain.CommerceMathTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-09-06T15:51:39" hostname="runnervmejwal" time="0.005">
+  <properties/>
+  <testcase name="example E full profit is 210" classname="com.hisabnikash.app.domain.CommerceMathTest" time="0.001"/>
+  <testcase name="example B account transfer is cash neutral" classname="com.hisabnikash.app.domain.CommerceMathTest" time="0.0"/>
+  <testcase name="invoice creation does not create revenue" classname="com.hisabnikash.app.domain.CommerceMathTest" time="0.0"/>
+  <testcase name="revenue is not cash and profit is not cash" classname="com.hisabnikash.app.domain.CommerceMathTest" time="0.0"/>
+  <testcase name="example D free delivery absorbs courier cost" classname="com.hisabnikash.app.domain.CommerceMathTest" time="0.0"/>
+  <testcase name="example A advance plus cod keeps revenue at order total" classname="com.hisabnikash.app.domain.CommerceMathTest" time="0.0"/>
+  <testcase name="example C courier settlement keeps revenue at 1000" classname="com.hisabnikash.app.domain.CommerceMathTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

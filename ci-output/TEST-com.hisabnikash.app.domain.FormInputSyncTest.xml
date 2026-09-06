@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.hisabnikash.app.domain.FormInputSyncTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-09-06T15:51:39" hostname="runnervmejwal" time="0.005">
+  <properties/>
+  <testcase name="loaded form ignores later database changes" classname="com.hisabnikash.app.domain.FormInputSyncTest" time="0.001"/>
+  <testcase name="typing after load is never overwritten" classname="com.hisabnikash.app.domain.FormInputSyncTest" time="0.0"/>
+  <testcase name="typing before the record loads is never replaced" classname="com.hisabnikash.app.domain.FormInputSyncTest" time="0.003"/>
+  <testcase name="no stored record keeps current values and stays unloaded" classname="com.hisabnikash.app.domain.FormInputSyncTest" time="0.001"/>
+  <testcase name="new form seeds from stored record once" classname="com.hisabnikash.app.domain.FormInputSyncTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
