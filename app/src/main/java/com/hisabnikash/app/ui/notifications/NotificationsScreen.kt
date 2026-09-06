@@ -28,6 +28,7 @@ import com.hisabnikash.app.domain.model.formatDateTime
 import com.hisabnikash.app.ui.components.EmptyState
 import com.hisabnikash.app.ui.components.FilterChips
 import com.hisabnikash.app.ui.components.ScreenFrame
+import com.hisabnikash.app.ui.nav.Routes
 import com.hisabnikash.app.ui.theme.BrandGreen
 import com.hisabnikash.app.ui.theme.Error
 import com.hisabnikash.app.ui.theme.InkFaint
@@ -110,7 +111,12 @@ fun NotificationsScreenRoute(container: AppContainer, navController: NavHostCont
         } else {
             state.items.forEach { notification ->
                 ElevatedCard(
-                    onClick = { vm.markRead(container, notification.id) },
+                    onClick = {
+                        vm.markRead(container, notification.id)
+                        notificationTarget(notification.refType, notification.refId)?.let {
+                            navController.navigate(it)
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
                     shape = MaterialTheme.shapes.medium
                 ) {
@@ -147,4 +153,25 @@ fun NotificationsScreenRoute(container: AppContainer, navController: NavHostCont
         }
         Spacer(Modifier.height(16.dp))
     }
+}
+
+/**
+ * Resolves a notification to a registered navigation destination.
+ *
+ * Returns null when the referenced record has no detail route yet (for
+ * example payment or settlement records), in which case the row still marks
+ * itself read but does not navigate. Only routes registered in
+ * [com.hisabnikash.app.ui.nav.HisabNavGraph] are ever returned, so a tap can
+ * never hit an unregistered destination.
+ */
+private fun notificationTarget(refType: String?, refId: Long?): String? = when (refType) {
+    "ORDER" -> refId?.let { "order/$it" }
+    "PRODUCT" -> refId?.let { "product/$it" }
+    "INVOICE" -> refId?.let { "invoice/$it" }
+    "RETURN" -> Routes.RETURNS
+    "EXCHANGE" -> Routes.EXCHANGES
+    "REFUND" -> Routes.REFUNDS
+    "SETTLEMENT", "SETTLEMENT_FEE" -> Routes.SETTLEMENTS
+    "PAYMENT" -> Routes.TRANSACTIONS
+    else -> null
 }
