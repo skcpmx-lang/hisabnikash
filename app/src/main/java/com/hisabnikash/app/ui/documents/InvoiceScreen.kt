@@ -305,7 +305,7 @@ class InvoiceFormViewModel(container: AppContainer, private val invoiceId: Long)
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't create invoice.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't create invoice."))
                 }
             }
         }
@@ -629,7 +629,7 @@ fun InvoiceDetailRoute(container: AppContainer, navController: NavHostController
                                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                                     paying = false
                                     result.onSuccess { payAmount = 0 }.onFailure {
-                                        actionError = it.message ?: "Couldn't record payment."
+                                        actionError = com.hisabnikash.app.domain.model.SafeMessages.save(it, "Couldn't record payment.")
                                     }
                                 }
                             }

@@ -197,19 +197,23 @@ class FinanceRepository(private val db: AppDatabase, private val workspace: Work
     fun observePayablesOutstanding(businessId: Long) =
         db.receivablePayableDao().observePayablesOutstanding(businessId)
 
-    suspend fun saveCustomReceivable(receivable: ReceivableEntity): Long =
-        if (receivable.id == 0L) db.receivablePayableDao().insertReceivable(receivable)
+    suspend fun saveCustomReceivable(receivable: ReceivableEntity): Long {
+        workspace.requireBusinessExists(receivable.businessId)
+        return if (receivable.id == 0L) db.receivablePayableDao().insertReceivable(receivable)
         else {
             db.receivablePayableDao().updateReceivable(receivable)
             receivable.id
         }
+    }
 
-    suspend fun saveCustomPayable(payable: PayableEntity): Long =
-        if (payable.id == 0L) db.receivablePayableDao().insertPayable(payable)
+    suspend fun saveCustomPayable(payable: PayableEntity): Long {
+        workspace.requireBusinessExists(payable.businessId)
+        return if (payable.id == 0L) db.receivablePayableDao().insertPayable(payable)
         else {
             db.receivablePayableDao().updatePayable(payable)
             payable.id
         }
+    }
 
     // --------------------------------------------------------- growth: ad/budget
 

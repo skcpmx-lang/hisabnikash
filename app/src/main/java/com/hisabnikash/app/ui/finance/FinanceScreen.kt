@@ -380,7 +380,7 @@ class ReceivePaymentViewModel(container: AppContainer, private val receivableId:
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't record payment.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't record payment."))
                 }
             }
         }
@@ -497,7 +497,7 @@ class PayOutViewModel(container: AppContainer, private val payableId: Long?) : V
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't record payment.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't record payment."))
                 }
             }
         }
@@ -700,7 +700,7 @@ class SettlementFormViewModel(container: AppContainer) : ViewModel() {
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't record settlement.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't record settlement."))
                 }
             }
         }
@@ -803,7 +803,7 @@ class CourierFormViewModel(container: AppContainer, private val courierId: Long)
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't save courier.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't save courier."))
                 }
             }
         }
@@ -1042,7 +1042,7 @@ class CampaignFormViewModel(container: AppContainer) : ViewModel() {
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't save campaign.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't save campaign."))
                 }
             }
         }
@@ -1234,7 +1234,7 @@ class BudgetFormViewModel(container: AppContainer) : ViewModel() {
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't save budget.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't save budget."))
                 }
             }
         }

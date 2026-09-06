@@ -965,7 +965,7 @@ fun ProductDetailRoute(container: AppContainer, navController: NavHostController
                                     reason = ""
                                 }.onFailure { e ->
                                     adjusting = false
-                                    adjustError = e.message ?: "Couldn't adjust stock."
+                                    adjustError = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't adjust stock.")
                                 }
                             }
                         }

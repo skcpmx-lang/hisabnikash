@@ -163,7 +163,7 @@ fun OrderDetailRoute(container: AppContainer, navController: NavHostController, 
             val result = runCatching { container.orderRepository.updateStatus(orderId, toStatus, reason) }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 updating = false
-                result.onFailure { updateError = it.message ?: "Couldn't update order." }
+                result.onFailure { updateError = com.hisabnikash.app.domain.model.SafeMessages.save(it, "Couldn't update order.") }
             }
         }
     }
@@ -429,7 +429,7 @@ fun OrderDetailRoute(container: AppContainer, navController: NavHostController, 
                                 result.onSuccess {
                                     payAmount = 0
                                     updateError = null
-                                }.onFailure { updateError = it.message ?: "Couldn't record payment." }
+                                }.onFailure { updateError = com.hisabnikash.app.domain.model.SafeMessages.save(it, "Couldn't record payment.") }
                             }
                         }
                     },

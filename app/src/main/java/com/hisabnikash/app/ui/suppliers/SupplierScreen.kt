@@ -599,7 +599,7 @@ class PurchaseFormViewModel(container: AppContainer) : ViewModel() {
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess(onSaved).onFailure { e ->
-                    form.value = f.copy(saving = false, error = "Couldn't create purchase: ${e.message}")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't create purchase."))
                 }
             }
         }

@@ -235,7 +235,7 @@ class OrderFormViewModel(container: AppContainer) : ViewModel() {
                 }.onFailure { e ->
                     form.value = f.copy(
                         saving = false,
-                        error = "Couldn't save the order. ${e.message ?: "Check the required fields and try again."}"
+                        error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't save the order. Check the required fields and try again.")
                     )
                 }
             }

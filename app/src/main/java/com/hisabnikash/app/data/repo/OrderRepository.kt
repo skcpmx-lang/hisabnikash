@@ -543,7 +543,14 @@ class OrderRepository(private val db: AppDatabase, private val workspace: Worksp
         dateAt: Long = System.currentTimeMillis(),
         note: String? = null
     ) = db.withTransaction {
-        val payable = db.receivablePayableDao().getPayable(payableId) ?: return@withTransaction
+        workspace.requireBusinessExists(businessId)
+        val payable = db.receivablePayableDao().getPayable(payableId)
+            ?: throw IllegalStateException("This payable no longer exists. Refresh and try again.")
+        if (payable.businessId != businessId) {
+            throw IllegalStateException(
+                "This payable belongs to a different business. Switch business and try again."
+            )
+        }
         val paymentId = db.paymentDao().insert(
             PaymentEntity(
                 businessId = businessId,
@@ -592,6 +599,14 @@ class OrderRepository(private val db: AppDatabase, private val workspace: Worksp
     /** Records a courier settlement, posts cash and fees to the ledger and
      *  pays down the oldest COD receivables it covers. */
     suspend fun recordSettlement(input: SettlementInput): Long = db.withTransaction {
+        workspace.requireBusinessExists(input.businessId)
+        val courier = db.courierDao().getById(input.courierId)
+            ?: throw IllegalStateException("The selected courier no longer exists. Refresh and try again.")
+        if (courier.businessId != input.businessId) {
+            throw IllegalStateException(
+                "The selected courier belongs to a different business. Switch business and try again."
+            )
+        }
         val settlement = CourierSettlementEntity(
             businessId = input.businessId,
             courierId = input.courierId,
@@ -928,6 +943,25 @@ class OrderRepository(private val db: AppDatabase, private val workspace: Worksp
     // ---------------------------------------------------------------- invoices
 
     suspend fun createInvoice(input: InvoiceInput): Long = db.withTransaction {
+        workspace.requireBusinessExists(input.businessId)
+        input.customerId?.let { id ->
+            val customer = db.customerDao().getById(id)
+            if (customer != null && customer.businessId != input.businessId) {
+                throw IllegalStateException(
+                    "This invoice's customer belongs to a different business. Switch business and try again."
+                )
+            }
+        }
+        input.lines.forEach { line ->
+            line.productId?.let { id ->
+                val product = db.productDao().getById(id)
+                if (product != null && product.businessId != input.businessId) {
+                    throw IllegalStateException(
+                        "A product on this invoice belongs to a different business. Switch business and try again."
+                    )
+                }
+            }
+        }
         val settings = db.workspaceDao().getSettings(input.businessId)
         val subtotal = input.lines.sumOf { it.qty * it.unitPriceMinor }.coerceAtLeast(0)
         val tax = if (settings?.taxEnabled == true && settings.taxRateBps > 0) {

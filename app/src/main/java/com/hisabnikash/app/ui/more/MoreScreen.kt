@@ -863,9 +863,8 @@ fun ChannelsScreenRoute(container: AppContainer, navController: NavHostControlle
                 val name = newName.trim()
                 if (name.isEmpty()) return@Button
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
-                    container.prefs.activeBusinessId.first()?.let { id ->
-                        container.financeRepository.addChannel(id, name)
-                    }
+                    val id = container.workspaceRepository.requireActiveBusiness()
+                    container.financeRepository.addChannel(id, name)
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                         newName = ""
                     }

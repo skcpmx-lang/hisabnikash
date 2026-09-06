@@ -277,7 +277,7 @@ class AccountFormViewModel(container: AppContainer, private val accountId: Long)
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess(onSaved).onFailure { e ->
-                    form.value = f.copy(saving = false, error = "Couldn't save account: ${e.message}")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't save account."))
                 }
             }
         }
@@ -659,7 +659,7 @@ class TransferFormViewModel(container: AppContainer) : ViewModel() {
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't record transfer.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't record transfer."))
                 }
             }
         }
@@ -856,7 +856,7 @@ class ExpenseFormViewModel(container: AppContainer) : ViewModel() {
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't record expense.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't record expense."))
                 }
             }
         }

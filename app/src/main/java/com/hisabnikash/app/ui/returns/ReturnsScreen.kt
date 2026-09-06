@@ -260,7 +260,7 @@ class ReturnFormViewModel(container: AppContainer, initialOrderId: Long? = null)
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't create return.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't create return."))
                 }
             }
         }
@@ -483,7 +483,7 @@ class ExchangeFormViewModel(container: AppContainer, initialOrderId: Long? = nul
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't create exchange.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't create exchange."))
                 }
             }
         }
@@ -635,7 +635,7 @@ class RefundFormViewModel(container: AppContainer, initialOrderId: Long? = null)
             }
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                 result.onSuccess { onSaved() }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't create refund.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't create refund."))
                 }
             }
         }

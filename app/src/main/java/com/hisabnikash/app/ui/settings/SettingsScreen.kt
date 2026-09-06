@@ -175,7 +175,7 @@ class SettingsViewModel(container: AppContainer) : ViewModel() {
                     form.value = f.copy(saving = false, saved = true)
                     onDone()
                 }.onFailure { e ->
-                    form.value = f.copy(saving = false, error = e.message ?: "Couldn't save settings.")
+                    form.value = f.copy(saving = false, error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't save settings."))
                 }
             }
         }
@@ -494,7 +494,7 @@ fun BackupScreenRoute(container: AppContainer, navController: NavHostController)
                 file.delete()
             } catch (e: Exception) {
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                    error = "Export failed: ${e.message}"
+                    error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Export failed.")
                 }
             }
         }
@@ -523,7 +523,7 @@ fun BackupScreenRoute(container: AppContainer, navController: NavHostController)
                 }
             } catch (e: Exception) {
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                    error = "Import failed: ${e.message}"
+                    error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Import failed.")
                 }
             }
         }
@@ -636,7 +636,7 @@ fun DataHealthScreenRoute(container: AppContainer, navController: NavHostControl
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                         running = false
                         report = result.getOrNull()
-                        message = result.fold({ null }, { "Check failed: ${it.message}" })
+                        message = result.fold({ null }, { com.hisabnikash.app.domain.model.SafeMessages.save(it, "Check failed.") })
                     }
                 }
             },

@@ -216,7 +216,7 @@ fun OnboardingScreen(
                             }
                         }.onFailure { e ->
                             saving = false
-                            error = "Couldn't finish setup: ${e.message}"
+                            error = com.hisabnikash.app.domain.model.SafeMessages.save(e, "Couldn't finish setup.")
                         }
                     }
                 }
