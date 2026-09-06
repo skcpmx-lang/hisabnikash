@@ -96,11 +96,13 @@ class BusinessSessionTest {
         val store = FakeStore()
         val dao = FakeWorkspaceDao().apply { seed(1L, createdAt = 1); seed(9L, createdAt = 9) }
         store.setActiveBusiness(999L) // points at a deleted/missing business
+        store.setOnboardingDone(true)
 
         val healed = session(store, dao).recover()
 
         assertEquals(9L, healed)
         assertEquals(9L, store.activeBusinessId.first())
+        // Recovery never re-arms onboarding when a business still exists.
         assertTrue(store.onboarding)
     }
 
@@ -142,6 +144,7 @@ class BusinessSessionTest {
         val store = FakeStore()
         val dao = FakeWorkspaceDao().apply { seed(12L) }
         store.setActiveBusiness(12L)
+        store.setOnboardingDone(true)
 
         assertEquals(12L, session(store, dao).recover())
         assertEquals(12L, store.activeBusinessId.first())
