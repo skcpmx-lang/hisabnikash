@@ -1,6 +1,7 @@
 package com.hisabnikash.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Check
@@ -31,7 +34,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hisabnikash.app.ui.theme.BrandGold
 import com.hisabnikash.app.ui.theme.BrandGreen
-import com.hisabnikash.app.ui.theme.BrandGreenDeep
 import com.hisabnikash.app.ui.theme.BrandGreenSoft
 import com.hisabnikash.app.ui.theme.Error
 import com.hisabnikash.app.ui.theme.InkFaint
@@ -147,22 +149,20 @@ fun QuickActionTile(
 }
 
 /**
- * In-app brand mark. Uses the same abstract flow glyph as the launcher icon
- * so the identity stays consistent everywhere.
+ * In-app brand mark. Renders the supplied HisabNikash artwork exactly as
+ * provided, clipped to the same rounded shape used elsewhere for identity.
  */
 @Composable
 fun BrandMark(size: androidx.compose.ui.unit.Dp = 44.dp) {
     Box(
         modifier = Modifier
             .size(size)
-            .background(BrandGreenDeep, RoundedCornerShape(size * 0.28f)),
-        contentAlignment = Alignment.Center
+            .clip(RoundedCornerShape(size * 0.28f))
     ) {
-        Icon(
-            painter = androidx.compose.ui.res.painterResource(com.hisabnikash.app.R.drawable.ic_brand_mark),
+        Image(
+            painter = androidx.compose.ui.res.painterResource(com.hisabnikash.app.R.drawable.app_logo),
             contentDescription = "HisabNikash",
-            tint = Color.Unspecified,
-            modifier = Modifier.size(size * 0.72f)
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
