@@ -23,6 +23,7 @@ import com.hisabnikash.app.data.db.ReturnEntity
 import com.hisabnikash.app.data.db.ReturnItemEntity
 import com.hisabnikash.app.domain.model.percentBpsOf
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 data class OrderLine(
     val productId: Long?,
@@ -171,6 +172,14 @@ class OrderRepository(private val db: AppDatabase, private val workspace: Worksp
     fun observeStatusHistory(orderId: Long) = db.orderHistoryDao().observeForOrder(orderId)
 
     fun observeCountsByStatus(businessId: Long) = db.orderDao().observeCountsByStatus(businessId)
+
+    fun observeCounts(businessId: Long) =
+        db.orderDao().observeCountsByStatus(businessId)
+            .map { counts -> counts.associate { it.status to it.count } }
+
+    fun observeProcessing(businessId: Long) = db.orderDao().observeProcessing(businessId)
+
+    fun observePendingCod(businessId: Long) = db.orderDao().observePendingCod(businessId)
 
     fun observePaymentsForOrder(businessId: Long, orderId: Long) =
         db.paymentDao().observeForOrder(businessId, orderId)

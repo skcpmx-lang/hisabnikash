@@ -52,6 +52,16 @@ interface AccountDao {
     )
     suspend fun totalOpening(businessId: Long): Long
 
+    @Query(
+        """
+        SELECT COALESCE(SUM(a.openingBalanceMinor +
+            (SELECT COALESCE(SUM(CASE WHEN t.direction = 'IN' THEN t.amountMinor ELSE -t.amountMinor END), 0)
+             FROM account_transactions t WHERE t.accountId = a.id)), 0)
+        FROM accounts a WHERE a.businessId = :businessId AND a.archived = 0
+        """
+    )
+    fun observeTotalBalance(businessId: Long): Flow<Long>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(accounts: List<AccountEntity>)
 
@@ -171,6 +181,11 @@ interface ExpenseDao {
     )
     suspend fun inRange(businessId: Long, fromAt: Long, toAt: Long): List<ExpenseEntity>
 
+    @Query(
+        "SELECT * FROM expenses WHERE businessId = :businessId AND dateAt BETWEEN :fromAt AND :toAt ORDER BY dateAt ASC"
+    )
+    fun observeInRange(businessId: Long, fromAt: Long, toAt: Long): Flow<List<ExpenseEntity>>
+
     @Query("SELECT * FROM expenses WHERE businessId = :businessId AND vendor LIKE '%' || :query || '%' COLLATE NOCASE ORDER BY dateAt DESC LIMIT 200")
     suspend fun search(businessId: Long, query: String): List<ExpenseEntity>
 
@@ -199,6 +214,9 @@ interface ReceivablePayableDao {
     @Query("SELECT * FROM receivables WHERE businessId = :businessId AND sourceType = 'COD' AND status != 'PAID' ORDER BY id ASC")
     suspend fun openCodReceivables(businessId: Long): List<ReceivableEntity>
 
+    @Query("SELECT * FROM receivables WHERE businessId = :businessId AND status != 'PAID' ORDER BY createdAt DESC LIMIT 1000")
+    suspend fun openReceivables(businessId: Long): List<ReceivableEntity>
+
     @Query(
         """
         SELECT * FROM receivables WHERE businessId = :businessId AND (:status = 'ALL' OR status = :status)
@@ -219,6 +237,9 @@ interface ReceivablePayableDao {
         "SELECT COALESCE(SUM(amountMinor - paidMinor), 0) FROM receivables WHERE businessId = :businessId AND status IN ('PENDING','PARTIAL','OVERDUE')"
     )
     fun observeOutstanding(businessId: Long): Flow<Long>
+
+    @Query("SELECT * FROM receivables WHERE businessId = :businessId AND sourceType = 'COD' ORDER BY id ASC")
+    fun observeCodReceivables(businessId: Long): Flow<List<ReceivableEntity>>
 
     @Insert
     suspend fun insertPayable(payable: PayableEntity): Long

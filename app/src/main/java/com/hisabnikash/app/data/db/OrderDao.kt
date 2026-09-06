@@ -99,6 +99,15 @@ interface OrderDao {
     )
     suspend fun allInRange(businessId: Long, fromAt: Long, toAt: Long): List<OrderEntity>
 
+    @Query(
+        """
+        SELECT * FROM orders WHERE businessId = :businessId
+        AND orderDate BETWEEN :fromAt AND :toAt
+        ORDER BY orderDate ASC
+        """
+    )
+    fun observeAllInRange(businessId: Long, fromAt: Long, toAt: Long): Flow<List<OrderEntity>>
+
     @Query("SELECT COUNT(*) FROM orders WHERE businessId = :businessId")
     fun observeCount(businessId: Long): Flow<Long>
 
@@ -114,6 +123,16 @@ interface OrderDao {
 
     @Query(
         """
+        SELECT COALESCE(SUM(oi.qty * oi.unitCostMinor), 0) FROM order_items oi
+        JOIN orders o ON o.id = oi.orderId
+        WHERE o.businessId = :businessId AND o.status = 'DELIVERED'
+          AND o.orderDate BETWEEN :fromAt AND :toAt
+        """
+    )
+    fun observeCogsInRange(businessId: Long, fromAt: Long, toAt: Long): Flow<Long>
+
+    @Query(
+        """
         SELECT COALESCE(SUM(oi.qty), 0) FROM order_items oi
         JOIN orders o ON o.id = oi.orderId
         WHERE o.businessId = :businessId AND o.status = 'DELIVERED'
@@ -121,6 +140,16 @@ interface OrderDao {
         """
     )
     suspend fun unitsInRange(businessId: Long, fromAt: Long, toAt: Long): Long
+
+    @Query(
+        """
+        SELECT COALESCE(SUM(oi.qty), 0) FROM order_items oi
+        JOIN orders o ON o.id = oi.orderId
+        WHERE o.businessId = :businessId AND o.status = 'DELIVERED'
+          AND o.orderDate BETWEEN :fromAt AND :toAt
+        """
+    )
+    fun observeUnitsInRange(businessId: Long, fromAt: Long, toAt: Long): Flow<Long>
 
     @Query("SELECT COUNT(*) FROM orders WHERE businessId = :businessId AND status = :status AND orderDate BETWEEN :fromAt AND :toAt")
     suspend fun countWithStatusInRange(businessId: Long, status: String, fromAt: Long, toAt: Long): Long

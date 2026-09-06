@@ -29,6 +29,9 @@ interface CourierDao {
     @Query("SELECT * FROM couriers WHERE id = :id")
     suspend fun getById(id: Long): CourierEntity?
 
+    @Query("SELECT * FROM couriers WHERE id = :id")
+    fun observeById(id: Long): Flow<CourierEntity?>
+
     @Query("SELECT * FROM couriers WHERE businessId = :businessId ORDER BY createdAt")
     suspend fun listAll(businessId: Long): List<CourierEntity>
 

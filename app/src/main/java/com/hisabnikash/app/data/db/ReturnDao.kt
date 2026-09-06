@@ -141,6 +141,11 @@ interface RefundDao {
     )
     suspend fun inRange(businessId: Long, fromAt: Long, toAt: Long): List<RefundDocumentEntity>
 
+    @Query(
+        "SELECT * FROM refund_documents WHERE businessId = :businessId AND dateAt BETWEEN :fromAt AND :toAt ORDER BY dateAt ASC"
+    )
+    fun observeInRange(businessId: Long, fromAt: Long, toAt: Long): Flow<List<RefundDocumentEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(refunds: List<RefundDocumentEntity>)
 

@@ -86,6 +86,106 @@ class InsightsRepository(private val db: AppDatabase) {
     fun observeDeliveredOrders(businessId: Long, fromAt: Long, toAt: Long) =
         db.orderDao().observeDeliveredInRange(businessId, fromAt, toAt)
 
+    fun observeDelivered(businessId: Long) = db.orderDao().observeDeliveredInRange(
+        businessId, 0, Long.MAX_VALUE
+    )
+
+    /**
+     * Reactive metrics: re-computes automatically whenever any contributing
+     * table changes, so dashboards never show stale aggregates.
+     */
+    fun observeMetrics(businessId: Long, fromAt: Long, toAt: Long): Flow<MetricsBundle> {
+        val a = kotlinx.coroutines.flow.combine(
+            db.orderDao().observeAllInRange(businessId, fromAt, toAt),
+            db.refundDao().observeInRange(businessId, fromAt, toAt),
+            db.expenseDao().observeInRange(businessId, fromAt, toAt),
+            db.ledgerDao().observeInRange(businessId, fromAt, toAt),
+            db.receivablePayableDao().observeCodReceivables(businessId)
+        ) { orders, refunds, expenses, ledger, codOpen ->
+            val delivered = orders.filter { it.status == OrderStatus.DELIVERED.name }
+            val revenue = delivered.sumOf { CommerceMath.orderRevenue(it) } - refunds.sumOf { it.amountMinor }
+            val orderCosts = delivered.sumOf { CommerceMath.orderCosts(it) }
+            val cashIn = ledger.filter { it.direction == "IN" && it.category != "TRANSFER" }.sumOf { it.amountMinor }
+            val cashOut = ledger.filter { it.direction == "OUT" && it.category != "TRANSFER" }.sumOf { it.amountMinor }
+            val transfers = ledger.filter { it.category == "TRANSFER" }
+            RawSlice(
+                orders, refunds, expenses, ledger, codOpen, delivered, revenue, orderCosts,
+                cashIn, cashOut, transfers
+            )
+        }
+        val b = kotlinx.coroutines.flow.combine(
+            db.orderDao().observeCogsInRange(businessId, fromAt, toAt),
+            db.orderDao().observeUnitsInRange(businessId, fromAt, toAt),
+            db.accountDao().observeTotalBalance(businessId),
+            db.receivablePayableDao().observeOutstanding(businessId),
+            db.campaignDao().observeInRange(businessId, fromAt, toAt)
+        ) { cogs, units, cash, payables, campaigns ->
+            ExtraSlice(cogs, units, cash, payables, campaigns)
+        }
+        return kotlinx.coroutines.flow.combine(a, b) { raw, extra ->
+            val delivered = raw.delivered
+            val profit = raw.revenue - extra.cogs - raw.orderCosts - raw.refunds.sumOf { it.amountMinor }
+            MetricsBundle(
+                revenueMinor = raw.revenue.coerceAtLeast(0),
+                netProfitMinor = profit,
+                cogsMinor = extra.cogs,
+                courierMinor = delivered.sumOf { it.courierFeeMinor + it.returnCourierFeeMinor },
+                packagingMinor = delivered.sumOf { it.packagingMinor },
+                advertisingMinor = delivered.sumOf { it.advertisingMinor },
+                otherCostsMinor = delivered.sumOf { it.otherCostMinor },
+                refundsMinor = raw.refunds.sumOf { it.amountMinor },
+                expensesMinor = raw.expenses.sumOf { it.amountMinor },
+                orderCount = raw.orders.size.toLong(),
+                deliveredCount = delivered.size.toLong(),
+                returnedCount = raw.orders.count { it.status == "RETURNED" }.toLong(),
+                cancelledCount = raw.orders.count { it.status == "CANCELLED" }.toLong(),
+                unitsSold = extra.units,
+                codPendingMinor = raw.codOpen.sumOf { (it.amountMinor - it.paidMinor).coerceAtLeast(0) },
+                availableCashMinor = extra.cash,
+                receivablesMinor = raw.codOpen.sumOf { (it.amountMinor - it.paidMinor).coerceAtLeast(0) },
+                payablesMinor = extra.payables,
+                cashInMinor = raw.cashIn,
+                cashOutMinor = raw.cashOut,
+                transferInMinor = raw.transfers.filter { it.direction == "IN" }.sumOf { it.amountMinor },
+                transferOutMinor = raw.transfers.filter { it.direction == "OUT" }.sumOf { it.amountMinor },
+                aovMinor = if (delivered.isEmpty()) 0 else raw.revenue / delivered.size,
+                marginBps = CommerceMath.marginPercentBps(profit, raw.revenue),
+                returnRateBps = CommerceMath.returnRate(
+                    delivered.count { it.status == "RETURNED" }.toLong(),
+                    delivered.size.toLong()
+                ),
+                roasBps = CommerceMath.roas(
+                    extra.campaigns.sumOf { it.attributedRevenueMinor },
+                    extra.campaigns.sumOf { it.spendMinor }
+                ),
+                adSpendMinor = extra.campaigns.sumOf { it.spendMinor },
+                adRevenueMinor = extra.campaigns.sumOf { it.attributedRevenueMinor }
+            )
+        }
+    }
+
+    private data class RawSlice(
+        val orders: List<com.hisabnikash.app.data.db.OrderEntity>,
+        val refunds: List<com.hisabnikash.app.data.db.RefundDocumentEntity>,
+        val expenses: List<com.hisabnikash.app.data.db.ExpenseEntity>,
+        val ledger: List<com.hisabnikash.app.data.db.AccountTransactionEntity>,
+        val codOpen: List<com.hisabnikash.app.data.db.ReceivableEntity>,
+        val delivered: List<com.hisabnikash.app.data.db.OrderEntity>,
+        val revenue: Long,
+        val orderCosts: Long,
+        val cashIn: Long,
+        val cashOut: Long,
+        val transfers: List<com.hisabnikash.app.data.db.AccountTransactionEntity>
+    )
+
+    private data class ExtraSlice(
+        val cogs: Long,
+        val units: Long,
+        val cash: Long,
+        val payables: Long,
+        val campaigns: List<com.hisabnikash.app.data.db.CampaignEntity>
+    )
+
     suspend fun metrics(businessId: Long, fromAt: Long, toAt: Long): MetricsBundle {
         val orders = db.orderDao().allInRange(businessId, fromAt, toAt)
         val delivered = orders.filter { it.status == OrderStatus.DELIVERED.name }

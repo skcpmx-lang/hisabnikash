@@ -24,6 +24,9 @@ interface CampaignDao {
     @Query("SELECT * FROM campaigns WHERE businessId = :businessId AND startAt BETWEEN :fromAt AND :toAt ORDER BY startAt ASC")
     suspend fun allInRange(businessId: Long, fromAt: Long, toAt: Long): List<CampaignEntity>
 
+    @Query("SELECT * FROM campaigns WHERE businessId = :businessId AND startAt BETWEEN :fromAt AND :toAt ORDER BY startAt ASC")
+    fun observeInRange(businessId: Long, fromAt: Long, toAt: Long): Flow<List<CampaignEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(campaigns: List<CampaignEntity>)
 
