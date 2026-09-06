@@ -28,7 +28,7 @@ class AppPreferences(context: Context) : ActiveBusinessStore {
         val KEY_LAST_BACKUP_AT = longPreferencesKey("last_backup_at")
     }
 
-    val activeBusinessId: Flow<Long?> =
+    override val activeBusinessId: Flow<Long?> =
         store.data.map { it[KEY_ACTIVE_BUSINESS] ?: -1L }.map { it.takeIf { v -> v > 0 } }
 
     val onboardingDone: Flow<Boolean> =
@@ -43,15 +43,15 @@ class AppPreferences(context: Context) : ActiveBusinessStore {
 
     val lastBackupAt: Flow<Long?> = store.data.map { it[KEY_LAST_BACKUP_AT] }
 
-    suspend fun setActiveBusiness(id: Long) {
+    override suspend fun setActiveBusiness(id: Long) {
         store.edit { it[KEY_ACTIVE_BUSINESS] = id }
     }
 
-    suspend fun clearActiveBusiness() {
+    override suspend fun clearActiveBusiness() {
         store.edit { it.remove(KEY_ACTIVE_BUSINESS) }
     }
 
-    suspend fun setOnboardingDone(done: Boolean) {
+    override suspend fun setOnboardingDone(done: Boolean) {
         store.edit { it[KEY_ONBOARDING_DONE] = done }
     }
 

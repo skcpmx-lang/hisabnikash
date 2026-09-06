@@ -204,8 +204,6 @@ data class InvoiceFormUi(
 )
 
 class InvoiceFormViewModel(container: AppContainer, private val invoiceId: Long) : ViewModel() {
-    private val workspace = container.workspaceRepository
-
     private val db = container.database
     private val catalog = container.catalogRepository
     private val finance = container.financeRepository
