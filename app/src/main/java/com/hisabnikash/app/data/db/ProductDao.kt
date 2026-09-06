@@ -41,6 +41,7 @@ interface ProductDao {
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.qty ELSE 0 END), 0) AS unitsSold,
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.lineTotalMinor ELSE 0 END), 0) AS revenueMinor,
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.qty * oi.unitCostMinor ELSE 0 END), 0) AS cogsMinor,
+          COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.lineTotalMinor - oi.qty * oi.unitCostMinor ELSE 0 END), 0) AS profitMinor,
           MAX(o.orderDate) AS lastSaleAt
         FROM products p
         LEFT JOIN order_items oi ON oi.productId = p.id AND oi.businessId = p.businessId
@@ -58,6 +59,7 @@ interface ProductDao {
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.qty ELSE 0 END), 0) AS unitsSold,
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.lineTotalMinor ELSE 0 END), 0) AS revenueMinor,
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.qty * oi.unitCostMinor ELSE 0 END), 0) AS cogsMinor,
+          COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.lineTotalMinor - oi.qty * oi.unitCostMinor ELSE 0 END), 0) AS profitMinor,
           MAX(o.orderDate) AS lastSaleAt
         FROM products p
         LEFT JOIN order_items oi ON oi.productId = p.id AND oi.businessId = p.businessId
@@ -77,6 +79,7 @@ interface ProductDao {
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.qty ELSE 0 END), 0) AS unitsSold,
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.lineTotalMinor ELSE 0 END), 0) AS revenueMinor,
           COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.qty * oi.unitCostMinor ELSE 0 END), 0) AS cogsMinor,
+          COALESCE(SUM(CASE WHEN o.status = 'DELIVERED' THEN oi.lineTotalMinor - oi.qty * oi.unitCostMinor ELSE 0 END), 0) AS profitMinor,
           MAX(o.orderDate) AS lastSaleAt
         FROM products p
         LEFT JOIN order_items oi ON oi.productId = p.id AND oi.businessId = p.businessId
